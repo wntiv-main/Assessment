@@ -1,13 +1,14 @@
 from io import TextIOWrapper
 import os
-import sys
 import random
 from abc import ABC, abstractmethod, abstractstaticmethod
 from enum import IntEnum
 from typing import Callable
-import pathlib
+import dotenv
+from logger import Logger
 
-os.system("")
+dotenv.load_dotenv()
+
 
 class ResourceManager(ABC):
     class State(IntEnum):
@@ -40,67 +41,6 @@ class ResourceManager(ABC):
                 pass
 
 
-class Logger:
-    class Level(IntEnum):
-        DEBUG = 0
-        INFO = 1
-        WARN = 2
-        ERROR = 3
-        DEFAULT = 4
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-    def __init__(self, name: str, level: Level = Level.DEFAULT):
-        self.name = name
-        self.level = level
-
-    def get_level(self):
-        if self.level == Logger.Level.DEFAULT:
-            return Logger.Level.DEBUG
-        return self.level
-
-    def _traceback(self):
-        caller = sys._getframe().f_back.f_back
-        match self.get_level():
-            case Logger.Level.DEBUG:
-                return f"{caller.f_code.co_name} at ./{pathlib.Path(caller.f_code.co_filename).absolute().relative_to(pathlib.Path('./').absolute())}:{caller.f_lineno}"
-            case _:
-                return f"{caller.f_code.co_name}"
-    
-    def is_debug(self):
-        return self.get_level() <= self.Level.DEBUG
-
-    def debug(self, *args, **kwargs):
-        if self.is_debug():
-            print(f"{self.OKCYAN}[{self.name}:DEBUG in {self._traceback()}]", *args, self.ENDC, **kwargs)
-
-    def is_info(self):
-        return self.get_level() <= self.Level.INFO
-    
-    def info(self, *args, **kwargs):
-        if self.is_info():
-            print(f"[{self.name}:INFO in {self._traceback()}]", *args, **kwargs)
-
-    def is_warn(self):
-        return self.get_level() <= self.Level.WARN
-    
-    def warn(self, *args, **kwargs):
-        if self.is_warn():
-            print(f"{self.WARNING}[{self.name}:WARN in {self._traceback()}]", *args, self.ENDC, **kwargs)
-
-    def is_error(self):
-        return self.get_level() <= self.Level.ERROR
-    
-    def error(self, *args, **kwargs):
-        if self.is_error():
-            print(f"{self.FAIL}[{self.name}:ERROR in {self._traceback()}]", *args, self.ENDC, **kwargs)
 
 # Anything that can provide words
 # For future multiplayer support?
@@ -152,11 +92,9 @@ class RandomWordProvider(WordProvider, ResourceManager):
         return random.choice(self.words).lower().removesuffix("\n")
 
 
-class Config:
+class Config(ABC):
     logger = Logger("Config")
-    DICTIONARY_LOCATION = "dictionary_location"
-    NUMBER_LIVES = "number_of_lives"
-    
+
     class ParserUtil:
         class TypeParser:
             def __init__(self, parser: type | Callable[[str], any]):
@@ -209,8 +147,7 @@ class Config:
         self.file_location = config_location
         # Options
         self.config_cache = {}
-        self._add_config_option(Config.DICTIONARY_LOCATION, Config.ParserUtil.StringListParser, "Path to the word list the game uses", ["./words.txt", "./words_alpha.txt", "-./profanity-list.txt", "-./word-blacklist.txt"])
-        self._add_config_option(Config.NUMBER_LIVES, Config.ParserUtil.INT_PARSER, "Number of lives the player has", 8)
+        self._add_config_options()
         # Create a default config file if one does not exist
         if not os.path.exists(self.file_location):
             self.logger.info("No config file found, creating default")
@@ -222,6 +159,10 @@ class Config:
             self.logger.info(
                 f"Loading config from file '{self.file_location}'")
             self.load_from_file()
+
+    @abstractmethod
+    def _add_config_options(self):
+        pass
 
     def _add_config_option(self, *args):
         match args:
@@ -267,7 +208,17 @@ class Config:
         # Get an option from the config file
         self.check_file_changes()
         return self.config_cache[key].value
-    
+
+class MainConfig(Config):
+    DICTIONARY_LOCATION = "dictionary_location"
+    NUMBER_LIVES = "number_of_lives"
+    GAMEMODES_DIR = "gamemodes_directory"
+
+    def _add_config_options(self):
+        self._add_config_option(MainConfig.DICTIONARY_LOCATION, Config.ParserUtil.StringListParser, "Path to the word list the game uses", ["./words.txt", "./words_alpha.txt", "-./profanity-list.txt", "-./word-blacklist.txt"])
+        self._add_config_option(MainConfig.NUMBER_LIVES, Config.ParserUtil.INT_PARSER, "Number of lives the player has", 8)
+        self._add_config_option(MainConfig.GAMEMODES_DIR, Config.ParserUtil.STRING_PARSER, "Directory to load gamemode configs from", "./gamemodes/")
+
 class Player:
     class State(IntEnum):
         PLAYING = 0
@@ -308,19 +259,19 @@ class Player:
 class Game(ABC):
     logger = Logger("Game")
 
-    def __init__(self, config: Config):
+    def __init__(self, config: MainConfig):
         self.config = config
         self.random = RandomWordProvider(
-            self.config.get_option(Config.DICTIONARY_LOCATION))
-        
+            self.config.get_option(MainConfig.DICTIONARY_LOCATION))
+
     @abstractmethod
     def run(self):
         pass
 
 class SingleplayerGame(Game):
-    def __init__(self, config: Config):
+    def __init__(self, config: MainConfig):
         super().__init__(config)
-        self.player = Player(self.random.get_word(), self.config.get_option(Config.NUMBER_LIVES))
+        self.player = Player(self.random.get_word(), self.config.get_option(MainConfig.NUMBER_LIVES))
 
     def run(self):
         while self.player.state == Player.State.PLAYING:
@@ -330,8 +281,7 @@ class SingleplayerGame(Game):
                 print("YOU WIN!!!")
             case Player.State.DEAD:
                 print(f"YOU LOST! The word was '{self.player.word}'")
-            
 
 
-game = SingleplayerGame(Config("./config.txt"))
+game = SingleplayerGame(MainConfig("./config.txt"))
 game.run()
