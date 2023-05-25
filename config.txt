@@ -1,2 +1,6 @@
-dictionary_location=./profanity-list.txt|./word-blacklist.txt
+# Path to the word list the game uses
+dictionary_location=./words.txt|./words_alpha.txt|-./profanity-list.txt|-./word-blacklist.txt
+
+# Number of lives the player has
 number_of_lives=8
+

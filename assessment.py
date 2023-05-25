@@ -5,6 +5,7 @@ import random
 from abc import ABC, abstractmethod, abstractstaticmethod
 from enum import IntEnum
 from typing import Callable
+import pathlib
 
 os.system("")
 
@@ -69,7 +70,7 @@ class Logger:
         caller = sys._getframe().f_back.f_back
         match self.get_level():
             case Logger.Level.DEBUG:
-                return f"{caller.f_code.co_name} at {caller.f_code.co_filename}:{caller.f_lineno}"
+                return f"{caller.f_code.co_name} at ./{pathlib.Path(caller.f_code.co_filename).absolute().relative_to(pathlib.Path('./').absolute())}:{caller.f_lineno}"
             case _:
                 return f"{caller.f_code.co_name}"
     
@@ -193,7 +194,7 @@ class Config:
         def write(self, file: TextIOWrapper):
             for line in self.description.split("\n"):
                 file.write(f"# {line}\n")
-            file.write(f"{self.name}={self.value}\n\n")
+            file.write(f"{self.name}={self.validator.stringify(self.value)}\n\n")
         def parse(self, value):
             try:
                 parsed_value = self.validator.parse(value)
@@ -215,7 +216,7 @@ class Config:
             self.logger.info("No config file found, creating default")
             with open(self.file_location, "x") as file:
                 for entry in self.config_cache.values():
-                    file.write(f"{entry.name}={entry.value}\n")
+                    entry.write(file)
             self.last_read = os.stat(self.file_location).st_mtime
         else:
             self.logger.info(
@@ -240,8 +241,8 @@ class Config:
         self.logger.info(f"Parsing config file at '{self.file_location}'")
         for line in file.readlines():
             line = line.removesuffix('\n')
-            # Comments in config file
-            if line.startswith('#'):
+            # Comments, empty lines in config file
+            if line.startswith('#') or not line.strip():
                 continue
             # Does not follow key=value syntax
             if '=' not in line:
@@ -268,11 +269,16 @@ class Config:
         return self.config_cache[key].value
     
 class Player:
+    class State(IntEnum):
+        PLAYING = 0
+        WON = 1
+        DEAD = 2
     def __init__(self, word, lives):
         self.word = word
         self.lives = lives
         self.progress = ["_"] * len(word)
         self.guessed = []
+        self.state = Player.State.PLAYING
     def turn(self):
         print(" ".join(self.progress))
         while guess := input("Enter your guess: ").strip().lower():
@@ -289,9 +295,13 @@ class Player:
                     for i in range(len(self.word)):
                         if self.word[i] == guess:
                             self.progress[i] = guess.upper()
+                    if "_" not in self.progress:
+                        self.state = Player.State.WON
                 else:
                     print(f"The letter '{guess.upper()}' is not in the word!")
                     self.lives -= 1
+                    if self.lives <= 0:
+                        self.state = Player.State.DEAD
                 break
 
 
@@ -313,10 +323,13 @@ class SingleplayerGame(Game):
         self.player = Player(self.random.get_word(), self.config.get_option(Config.NUMBER_LIVES))
 
     def run(self):
-        while self.player.lives > 0:
+        while self.player.state == Player.State.PLAYING:
             self.player.turn()
-            self.config.check_file_changes()
-        print(self.player.word)
+        match self.player.state:
+            case Player.State.WON:
+                print("YOU WIN!!!")
+            case Player.State.DEAD:
+                print(f"YOU LOST! The word was '{self.player.word}'")
             
 
 
