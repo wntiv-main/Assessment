@@ -1,0 +1,2 @@
+dictionary_location=./profanity-list.txt|./word-blacklist.txt
+number_of_lives=8
