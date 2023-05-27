@@ -5,8 +5,10 @@ from abc import ABC, abstractmethod, abstractstaticmethod
 from enum import IntEnum
 import time
 from typing import Callable
+
 from logger import Logger
 from config import MainConfig
+from hangmanbot import HangmanBot
 
 
 class ResourceManager(ABC):
@@ -184,5 +186,8 @@ class SingleplayerGame(Game):
                 print(f"YOU LOST! The word was '{self.player.word}'")
 
 
-game = SingleplayerGame(MainConfig("./config.txt"))
-game.run()
+game = SingleplayerGame()
+# game.run()
+
+bot = HangmanBot(MainConfig("./config.txt"))
+bot.run()
