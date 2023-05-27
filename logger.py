@@ -16,7 +16,7 @@ class Logger:
         WARN = 2
         ERROR = 3
         DEFAULT = 4
-    
+
     COLORS = {
         Level.DEBUG: "\033[96m",
         Level.INFO: "",

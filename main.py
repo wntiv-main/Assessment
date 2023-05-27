@@ -65,26 +65,6 @@ class RandomWordProvider(WordProvider, ResourceManager):
         self.file_paths = file_path_provider
         self.words = []
 
-    # def reload_inner(self):
-    #     self.words = set()
-    #     for file_path in self.file_paths():
-    #         start_time = time.perf_counter()
-    #         is_blacklist = False
-    #         if file_path.startswith("-"):
-    #             file_path = file_path.removeprefix("-")
-    #             is_blacklist = True
-    #         with open(file_path) as file:
-    #             for line in file.readlines():
-    #                 word = line.strip().lower()
-    #                 if is_blacklist:
-    #                     self.words.discard(word)
-    #                 else:
-    #                     if word.isalpha() and word not in self.words:
-    #                         self.words.add(word)
-    #         self.logger.debug(f"Loading words from '{file_path}', took {(time.perf_counter() - start_time) * 1000}ms")
-    #     self.words = list(self.words)
-
-
     def reload_inner(self):
         # Setup word list
         # Use HashSet instead of list, as order does not matter and
