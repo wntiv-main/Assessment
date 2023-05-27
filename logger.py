@@ -16,6 +16,7 @@ class Logger:
         WARN = 2
         ERROR = 3
         DEFAULT = 4
+    
     COLORS = {
         Level.DEBUG: "\033[96m",
         Level.INFO: "",
@@ -23,10 +24,13 @@ class Logger:
         Level.ERROR: "\033[91m"
     }
 
+    default_level = Level.DEBUG if "--debug" in sys.argv else Level.INFO
+
     def __init__(self, name: str, level: Level = Level.DEFAULT):
         """
         Initialize with a name (shown in all log messages), and optionally a log level,
         where only messages with a level equal or higher than this will be displayed.
+        Default log level is INFO, or DEBUG if in a dev env (--debug passed into program args)
         """
         self.name = name
         self.level = level
@@ -37,7 +41,7 @@ class Logger:
         consideration of the default level which may vary if the program is running in a dev env.
         """
         if self.level == Logger.Level.DEFAULT:
-            return Logger.Level.DEBUG
+            return Logger.default_level
         return self.level
 
     def _traceback(self):

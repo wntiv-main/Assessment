@@ -1,12 +1,11 @@
-
-from abc import ABC, abstractmethod, abstractstaticmethod
+from abc import ABC, abstractmethod
+from enum import IntEnum
 from io import TextIOWrapper
 import os
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable
 
 from logger import Logger
-
-T = TypeVar("T")
+from parserutil import ParserUtil
 
 class Config(ABC):
     """
@@ -15,47 +14,49 @@ class Config(ABC):
     """
     logger = Logger("Config")
 
-    class ParserUtil:
-        class AbstractParser(ABC):
-            @abstractmethod
-            def parse(value: str):
-                pass
-            @abstractmethod
-            def stringify(value) -> str:
-                pass
-        class Parser(AbstractParser):
-            def __init__(self, parser: type | Callable[[str], T], stringifier: type | Callable[[T], str] = str):
-                self.parser = parser
-                self.stringifier = stringifier
-            def parse(self, value: str) -> T:
-                return self.parser(value)
-            def stringify(self, value: T) -> str:
-                return self.stringifier(value)
-        INT_PARSER = Parser(int)
-        FLOAT_PARSER = Parser(float)
-        STRING_PARSER = Parser(str)
-        STRING_LIST_PARSER = Parser(lambda value: value.split("|"), lambda value: "|".join(value))
-
     class Entry:
-        def __init__(self, name: str, validator, description: str, default_value):
+        """
+        Represents an entry within the config file
+        """
+        def __init__(self, name: str, validator: ParserUtil.AbstractParser, description: str, default_value):
             self.name = name
             self.validator = validator
             self.description = description
             self.value = default_value
             self.default_value = default_value
+            self.notifiers = []
+        def when_changed(self, callback: Callable[[str, str], None]):
+            """
+            Add a listener for when this option is changed. This is called
+            with the old value and the new value as parameters. When called,
+            the value of Entry.get_value() for this option will have already
+            been changed.
+            """
+            self.notifiers.append(callback)
         def write(self, file: TextIOWrapper):
+            """
+            Write this entry to the supplied file
+            """
+            # TODO: check for already existing line with this config option
+            # and handle appropriately
             for line in self.description.split("\n"):
                 file.write(f"# {line}\n")
             file.write(f"{self.name}={self.validator.stringify(self.value)}\n\n")
         def parse(self, value):
+            """
+            Parse the given value and check for change
+            """
             try:
                 parsed_value = self.validator.parse(value)
             except ValueError:
-                return False
+                return
             if parsed_value != self.value:
                 Config.logger.debug(
                     f"Config value '{self.name}' changed to '{parsed_value}' from '{self.value}'")
+                old_value = self.value
                 self.value = parsed_value
+                for notifier in self.notifiers:
+                    notifier(old_value, parsed_value)
             return self.value
     
     def __init__(self, config_location):
@@ -83,7 +84,7 @@ class Config(ABC):
         match args:
             case (Config.Entry(),):
                 option = args[0]
-            case (str(), _, str(), _):
+            case (str(), ParserUtil.AbstractParser(), str(), _):
                 option = Config.Entry(*args)
             case _:
                 self.logger.error("Failed to initialize config option from: ", args)
@@ -127,17 +128,75 @@ class Config(ABC):
         if os.stat(self.file_location).st_mtime > self.last_read:
             self.load_from_file()
 
-    def get_option(self, key) -> str:
-        # Get an option from the config file
+    def get_option(self, key: str) -> Entry:
+        """
+        Get an entry in the config file
+        """
         self.check_file_changes()
-        return self.config_cache[key].value
+        return self.config_cache[key]
+
+    def get_value(self, key: str) -> str:
+        """
+        Get the set value for an option in the config file
+        """
+        return self.get_option(key).value
 
 class MainConfig(Config):
+    # TODO: phase these out, move to gamemode system
+    GAMEMODES_DIR = "gamemodes_directory"
+    DISCORD_TOKEN = "discord_token"
     DICTIONARY_LOCATION = "dictionary_location"
     NUMBER_LIVES = "number_of_lives"
-    GAMEMODES_DIR = "gamemodes_directory"
 
     def _add_config_options(self):
-        self._add_config_option(MainConfig.DICTIONARY_LOCATION, Config.ParserUtil.STRING_LIST_PARSER, "Path to the word list the game uses", ["./words.txt", "./words_alpha.txt", "-./profanity-list.txt", "-./word-blacklist.txt"])
-        self._add_config_option(MainConfig.NUMBER_LIVES, Config.ParserUtil.INT_PARSER, "Number of lives the player has", 8)
-        self._add_config_option(MainConfig.GAMEMODES_DIR, Config.ParserUtil.STRING_PARSER, "Directory to load gamemode configs from", "./gamemodes/")
+        self._add_config_option(
+            MainConfig.GAMEMODES_DIR,
+            ParserUtil.STRING_PARSER,
+            "Directory to load gamemode configs from",
+            "./gamemodes/"
+        )
+        self._add_config_option(
+            MainConfig.DISCORD_TOKEN,
+            ParserUtil.STRING_PARSER,
+            "Token for the discord bot",
+            "<TOKEN>"
+        )
+        self._add_config_option(
+            MainConfig.DICTIONARY_LOCATION,
+            ParserUtil.STRING_LIST_PARSER,
+            "Path to the word list the game uses",
+            ["./words.txt", "./words_alpha.txt", "-./profanity-list.txt", "-./word-blacklist.txt"]
+        )
+        self._add_config_option(
+            MainConfig.NUMBER_LIVES,
+            ParserUtil.INT_PARSER,
+            "Number of lives the player has",
+            8
+        )
+
+class GamemodeConfig(Config):
+    class Gamemode(IntEnum):
+        SINGLEPLAYER = 0
+    GAME_TYPE = "gamemode"
+    NUMBER_LIVES = "number_of_lives"
+    DICTIONARY_LOCATION = "dictionary_location"
+
+    def _add_config_options(self):
+        self._add_config_option(
+            GamemodeConfig.GAME_TYPE,
+            ParserUtil.EnumParser(GamemodeConfig.Gamemode), 
+            "Gamemode this game should be",
+            GamemodeConfig.Gamemode.SINGLEPLAYER
+        )
+        self._add_config_option(
+            GamemodeConfig.NUMBER_LIVES,
+            ParserUtil.INT_PARSER,
+            "Number of lives the player has",
+            8
+        )
+        self._add_config_option(
+            GamemodeConfig.DICTIONARY_LOCATION,
+            ParserUtil.STRING_LIST_PARSER,
+            "Path to the word list the game uses",
+            ["./words.txt", "./words_alpha.txt", "-./profanity-list.txt", "-./word-blacklist.txt"]
+        )
