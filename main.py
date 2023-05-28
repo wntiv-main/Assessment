@@ -9,40 +9,7 @@ from typing import Callable
 from logger import Logger
 from config import MainConfig
 from hangmanbot import HangmanBot
-
-
-class ResourceManager(ABC):
-    logger = Logger("ResourceManager")
-    class State(IntEnum):
-        UNINITIALIZED = 0
-        INITIALIZING = 1
-        READY = 2
-
-    def __init__(self):
-        self.state = ResourceManager.State.UNINITIALIZED
-
-    def reload(self):
-        self.logger.info(f"Reloading resources for {self.__class__.__name__}")
-        self.state = ResourceManager.State.INITIALIZING
-        self.reload_inner()
-        self.state = ResourceManager.State.READY
-
-    @abstractmethod
-    def reload_inner(self):
-        pass
-
-    def hook_ready(self):
-        # For future threading possibility:
-        # May need to synchronize and await for resource to finish loading so we can use it
-        match self.state:
-            case ResourceManager.State.UNINITIALIZED:
-                self.reload()
-            case ResourceManager.State.INITIALIZING:
-                while self.state != ResourceManager.State.READY:
-                    pass
-            case ResourceManager.State.READY:
-                pass
-
+from resourcemanager import ResourceManager
 
 
 # Anything that can provide words
@@ -186,7 +153,7 @@ class SingleplayerGame(Game):
                 print(f"YOU LOST! The word was '{self.player.word}'")
 
 
-game = SingleplayerGame()
+game = SingleplayerGame(MainConfig("./config.txt"))
 # game.run()
 
 bot = HangmanBot(MainConfig("./config.txt"))

@@ -178,15 +178,29 @@ class GamemodeConfig(Config):
     class Gamemode(IntEnum):
         SINGLEPLAYER = 0
     GAME_TYPE = "gamemode"
+    DESCRIPTION = "description"
+    COMMAND_COOLDOWN = "command_cooldown"
     NUMBER_LIVES = "number_of_lives"
     DICTIONARY_LOCATION = "dictionary_location"
 
     def _add_config_options(self):
         self._add_config_option(
             GamemodeConfig.GAME_TYPE,
-            ParserUtil.EnumParser(GamemodeConfig.Gamemode), 
+            ParserUtil.EnumParser(GamemodeConfig.Gamemode),
             "Gamemode this game should be",
             GamemodeConfig.Gamemode.SINGLEPLAYER
+        )
+        self._add_config_option(
+            GamemodeConfig.DESCRIPTION,
+            ParserUtil.STRING_PARSER,
+            "Description of gamemode (shown in discord UI)",
+            "Just hangman"
+        )
+        self._add_config_option(
+            GamemodeConfig.COMMAND_COOLDOWN,
+            ParserUtil.INT_PARSER,
+            "Cooldown (in seconds) that a user must wait before using this command again",
+            0
         )
         self._add_config_option(
             GamemodeConfig.NUMBER_LIVES,
