@@ -1,14 +1,18 @@
 from abc import ABC, abstractmethod
-from config.gamemodeconfig import GamemodeConfig
+from discord import ApplicationContext
+
+# Normal import because python and cyclic imports
+import config.gamemodeconfig as gmc
 from logger import Logger
-from main import Player
 
 
 class Game(ABC):
     logger = Logger("Game")
 
-    def __init__(self, config: GamemodeConfig):
+    def __init__(self, config: gmc.GamemodeConfig):
         self.config = config
+
     @abstractmethod
-    def run(self):
+    def run(self, ctx: ApplicationContext):
         pass
+

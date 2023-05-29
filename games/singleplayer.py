@@ -1,14 +1,15 @@
-from config.gamemodeconfig import GamemodeConfig
+# Normal import because python and cyclic imports
+import config.gamemodeconfig as gmc
 from main import Player, RandomWordProvider
 from .game import Game
 
 
 class SingleplayerGame(Game):
-    def __init__(self, config: GamemodeConfig):
+    def __init__(self, config: gmc.GamemodeConfig):
         super().__init__(config)
-        self.random = RandomWordProvider(lambda: self.config.get_value(GamemodeConfig.DICTIONARY_LOCATION))
+        self.random = RandomWordProvider(lambda: self.config.get_value(gmc.GamemodeConfig.DICTIONARY_LOCATION))
         
-        self.player = Player(self.random.get_word(), self.config.get_value(GamemodeConfig.NUMBER_LIVES))
+        self.player = Player(self.random.get_word(), self.config.get_value(gmc.GamemodeConfig.NUMBER_LIVES))
 
     def run(self):
         while self.player.state == Player.State.PLAYING:

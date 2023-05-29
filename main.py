@@ -1,11 +1,11 @@
-from io import TextIOWrapper
-import os
 import random
-from abc import ABC, abstractmethod, abstractstaticmethod
+from abc import ABC, abstractmethod
 from enum import IntEnum
 import time
 from typing import Callable
-from games.singleplayer import SingleplayerGame
+# Normal import because python and cyclic imports
+import config.gamemodeconfig as gmc
+import games
 
 from logger import Logger
 from config.botconfig import BotConfig
@@ -124,9 +124,10 @@ class Player:
                         self.state = Player.State.DEAD
                 break
 
+games.Gamemode.SINGLEPLAYER(gmc.GamemodeConfig("./gamemodes/singleplayer.txt")).run()
 
-game = SingleplayerGame(BotConfig("./config.txt"))
-game.run()
+# game = SingleplayerGame(BotConfig("./config.txt"))
+# game.run()
 
 # bot = HangmanBot(BotConfig("./config.txt"))
 # bot.run()

@@ -1,13 +1,8 @@
-from enum import Enum
-
-# from games.singleplayer import SingleplayerGame
 from .config import Config
 from parserutil import ParserUtil
-
+from games import Gamemode
 
 class GamemodeConfig(Config):
-    class Gamemode(Enum):
-        SINGLEPLAYER = 0
     GAME_TYPE = "gamemode"
     DESCRIPTION = "description"
     COMMAND_COOLDOWN = "command_cooldown"
@@ -17,9 +12,9 @@ class GamemodeConfig(Config):
     def _add_config_options(self):
         self._add_config_option(
             GamemodeConfig.GAME_TYPE,
-            ParserUtil.EnumParser(GamemodeConfig.Gamemode),
+            ParserUtil.EnumParser(Gamemode),
             "Gamemode this game should be",
-            GamemodeConfig.Gamemode.SINGLEPLAYER
+            Gamemode.SINGLEPLAYER
         )
         self._add_config_option(
             GamemodeConfig.DESCRIPTION,

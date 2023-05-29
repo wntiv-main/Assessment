@@ -136,7 +136,7 @@ class Config(ABC):
         self.check_file_changes()
         return self.config_cache[key]
 
-    def get_value(self, key: str) -> str:
+    def get_value(self, key: str) -> Any:
         """
         Get the set value for an option in the config file
         """
