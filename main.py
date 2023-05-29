@@ -5,9 +5,10 @@ from abc import ABC, abstractmethod, abstractstaticmethod
 from enum import IntEnum
 import time
 from typing import Callable
+from games.singleplayer import SingleplayerGame
 
 from logger import Logger
-from config import MainConfig
+from config.botconfig import BotConfig
 from hangmanbot import HangmanBot
 from resourcemanager import ResourceManager
 
@@ -124,37 +125,8 @@ class Player:
                 break
 
 
-class Game(ABC):
-    logger = Logger("Game")
+game = SingleplayerGame(BotConfig("./config.txt"))
+game.run()
 
-    def __init__(self, config: MainConfig):
-        self.config = config
-        self.random = RandomWordProvider(
-            lambda: self.config.get_value(MainConfig.DICTIONARY_LOCATION))
-        self.config.get_option(MainConfig.DICTIONARY_LOCATION).when_changed(lambda _, _1: self.random.reload())
-
-    @abstractmethod
-    def run(self):
-        pass
-
-class SingleplayerGame(Game):
-    def __init__(self, config: MainConfig):
-        super().__init__(config)
-        self.player = Player(self.random.get_word(), self.config.get_value(MainConfig.NUMBER_LIVES))
-
-    def run(self):
-        while self.player.state == Player.State.PLAYING:
-            self.player.turn()
-            self.config.check_file_changes()
-        match self.player.state:
-            case Player.State.WON:
-                print("YOU WIN!!!")
-            case Player.State.DEAD:
-                print(f"YOU LOST! The word was '{self.player.word}'")
-
-
-game = SingleplayerGame(MainConfig("./config.txt"))
-# game.run()
-
-bot = HangmanBot(MainConfig("./config.txt"))
-bot.run()
+# bot = HangmanBot(BotConfig("./config.txt"))
+# bot.run()
