@@ -3,11 +3,11 @@ from discord import Bot, Intents, ApplicationContext, SlashCommandGroup, SlashCo
 from functools import partial
 
 from config.botconfig import BotConfig
-import config.gamemodeconfig import GamemodeConfig
+import config
 from resourcemanager import GamemodeConfigsManager
 
 class HangmanBot(Bot):
-    def __init__(self, config: BotConfig):
+    def __init__(self, config: config.BotConfig):
         self.config = config
         intents = Intents.none()
         intents.message_content = True
@@ -22,8 +22,8 @@ class HangmanBot(Bot):
             self.play_command.add_command(SlashCommand(
                 name = name,
                 callback = partial(self.start_gamemode, config),
-                description = config.get_value(GamemodeConfig.DESCRIPTION),
-                cooldown = config.get_value(GamemodeConfig.COMMAND_COOLDOWN)
+                description = config.get_value(config.GamemodeConfig.DESCRIPTION),
+                cooldown = config.get_value(config.GamemodeConfig.COMMAND_COOLDOWN)
             ))
         self.config_command = SlashCommandGroup("config", "Configure options for hangman")
 
@@ -33,8 +33,8 @@ class HangmanBot(Bot):
     def run(self) -> None:
         super().run(self.config.get_value(BotConfig.DISCORD_TOKEN), reconnect=True)
 
-    async def start_gamemode(self, config: GamemodeConfig, ctx: ApplicationContext):
-        game = config.get_value(GamemodeConfig.GAME_TYPE)(config)
+    async def start_gamemode(self, config: config.GamemodeConfig, ctx: ApplicationContext):
+        game = config.get_value(config.GamemodeConfig.GAME_TYPE)(config)
         game.run(ctx)
 
     def on_message(self):
