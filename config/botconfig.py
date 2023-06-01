@@ -3,6 +3,7 @@ from parserutil import ParserUtil
 
 
 class BotConfig(Config):
+    """Config options for the discord bot"""
     GAMEMODES_DIR = "gamemodes_directory"
     DISCORD_TOKEN = "discord_token"
 

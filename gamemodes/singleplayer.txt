@@ -2,10 +2,13 @@
 gamemode=singleplayer
 
 # Description of gamemode (shown in discord UI)
-description=Singleplayer hangman
+description=Singleplayer hangman (clean)
 
-# Cooldown (in seconds) that a user must wait before using this command again
-command_cooldown=10
+# Cooldown (in seconds) that a user must wait before using this command after using it [command_cooldown_per] times
+command_cooldown_rate=0
+
+# Amount of times a user can use this command before being on cooldown for [command_cooldown_rate] seconds
+command_cooldown_per=1
 
 # Number of lives the player has
 number_of_lives=8

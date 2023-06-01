@@ -13,8 +13,11 @@ import config
 
 
 class ResourceManager(ABC):
+    """Class that handles loading and manages a resource"""
     logger = Logger("ResourceManager")
+
     class State(IntEnum):
+        """The state of the resource"""
         UNINITIALIZED = 0
         INITIALIZING = 1
         READY = 2
@@ -23,19 +26,31 @@ class ResourceManager(ABC):
         self.state = ResourceManager.State.UNINITIALIZED
 
     def reload(self):
+        """Reload the resource. This is expected to take a long
+        time as it may need to perform heavy operations. Consider
+        reloading on a seperate thread to the main thread to avoid
+        hanging the entire program runtime.
+        """
         start_time = time.perf_counter()
         self.state = ResourceManager.State.INITIALIZING
         self.reload_inner()
         self.state = ResourceManager.State.READY
-        self.logger.info(f"Reloading resources for {self.__class__.__name__}, took {(time.perf_counter() - start_time) * 1000}ms")
+        self.logger.info(f"Reloading resources for\
+                         {self.__class__.__name__}, took\
+                         {(time.perf_counter() - start_time) * 1000}ms")
 
     @abstractmethod
     def reload_inner(self):
+        """Method that subclasses should override to
+        impliment their task.
+        """
         pass
 
     def hook_ready(self):
+        """Ensure the resource is ready, if not, wait for it"""
         # For future threading possibility:
-        # May need to synchronize and await for resource to finish loading so we can use it
+        # May need to synchronize and await for resource
+        # to finish loading so we can use it
         match self.state:
             case ResourceManager.State.UNINITIALIZED:
                 self.reload()
@@ -47,8 +62,15 @@ class ResourceManager(ABC):
 
 
 class GamemodeConfigsManager(ResourceManager):
+    """Resource Manager for the gamemode configs directory,
+    which handles the configs for every single gamemode in
+    every single server.
+    """
     logger = Logger("GamemodesConfigManager")
-    def __init__(self, file_path_provider: Callable[[], str], on_new_config: Callable[[str, str, 'config.GamemodeConfig'], None]):
+
+    def __init__(self, file_path_provider: Callable[[], str],
+            on_new_config: Callable[
+                [str, str, 'config.GamemodeConfig'], None]):
         super().__init__()
         self.file_path = file_path_provider
         self.gamemodes: Mapping[str, Mapping[str, config.GamemodeConfig]] = {}
@@ -65,7 +87,9 @@ class GamemodeConfigsManager(ResourceManager):
                 guild = "default"
             else:
                 guild = path.parts[0]
-            self.logger.debug(f"Walked to {path} (guild {guild}), has {files}")
+            self.logger.debug(f"Walked to {path} (guild {guild}),\
+                              has {files}")
+            # Load all config files in dir
             for file in files:
                 full_path = pathlib.Path(root, path, file)
                 name = os.path.basename(full_path.stem)
@@ -76,20 +100,24 @@ class GamemodeConfigsManager(ResourceManager):
                 if guild != "default":
                     self.new_config_callback(guild, name, cfg)
 
-
     def init_for_guilds(self, guilds: Iterable[Guild]):
+        """Initialize potentially new guilds with a config folder
+        filled with any existing default gamemode configs.
+        """
         self.hook_ready()
         for guild in guilds:
             guild_id = str(guild.id)
             path = self.path_cache.joinpath(f"./{guild_id}")
             if not path.exists():
-                self.logger.info(f"Initializing for {guild_id} with default gamemodes")
+                self.logger.info(f"Initializing for {guild_id} with default\
+                                 gamemodes")
                 # Create dir and init with default gamemodes
                 self.gamemodes[guild_id] = {}
                 path.mkdir()
                 for file in self.path_cache.iterdir():
                     if file.is_file():
-                        new_path = pathlib.Path(self.path_cache, guild_id, file.name)
+                        new_path = pathlib.Path(self.path_cache, guild_id,
+                                                file.name)
                         shutil.copy(file.absolute(), new_path.absolute())
                         name = os.path.basename(file.stem)
                         cfg = config.GamemodeConfig(new_path)

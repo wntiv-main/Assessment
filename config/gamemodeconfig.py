@@ -26,13 +26,16 @@ class GamemodeConfig(Config):
         self._add_config_option(
             GamemodeConfig.COMMAND_COOLDOWN_RATE,
             ParserUtil.FLOAT_PARSER,
-            f"Cooldown (in seconds) that a user must wait before using this command after using it [{GamemodeConfig.COMMAND_COOLDOWN_PER}] times",
+            f"Cooldown (in seconds) that a user must wait before using this\
+              command after using it [{GamemodeConfig.COMMAND_COOLDOWN_PER}]\
+              times",
             0
         )
         self._add_config_option(
             GamemodeConfig.COMMAND_COOLDOWN_PER,
             ParserUtil.INT_PARSER,
-            f"Amount of times a user can use this command before being on cooldown for [{GamemodeConfig.COMMAND_COOLDOWN_RATE}] seconds",
+            f"Amount of times a user can use this command before being on\
+              cooldown for [{GamemodeConfig.COMMAND_COOLDOWN_RATE}] seconds",
             1
         )
         self._add_config_option(
@@ -45,5 +48,6 @@ class GamemodeConfig(Config):
             GamemodeConfig.DICTIONARY_LOCATION,
             ParserUtil.STRING_LIST_PARSER,
             "Path to the word list the game uses",
-            ["./words.txt", "./words_alpha.txt", "-./profanity-list.txt", "-./word-blacklist.txt"]
+            ["./words.txt", "./words_alpha.txt",
+             "-./profanity-list.txt", "-./word-blacklist.txt"]
         )
