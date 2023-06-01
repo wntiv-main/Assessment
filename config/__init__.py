@@ -1,3 +1,3 @@
-from .config import *
-from .botconfig import *
-from .gamemodeconfig import *
+from config.config import Config
+from config.botconfig import BotConfig
+from config.gamemodeconfig import GamemodeConfig

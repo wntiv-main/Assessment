@@ -1,11 +1,12 @@
-import config.config
+from config.config import Config
 from parserutil import ParserUtil
 import games
 
-class GamemodeConfig(config.Config):
+class GamemodeConfig(Config):
     GAME_TYPE = "gamemode"
     DESCRIPTION = "description"
-    COMMAND_COOLDOWN = "command_cooldown"
+    COMMAND_COOLDOWN_RATE = "command_cooldown_rate"
+    COMMAND_COOLDOWN_PER = "command_cooldown_per"
     NUMBER_LIVES = "number_of_lives"
     DICTIONARY_LOCATION = "dictionary_location"
 
@@ -23,10 +24,16 @@ class GamemodeConfig(config.Config):
             "Just hangman"
         )
         self._add_config_option(
-            GamemodeConfig.COMMAND_COOLDOWN,
-            ParserUtil.INT_PARSER,
-            "Cooldown (in seconds) that a user must wait before using this command again",
+            GamemodeConfig.COMMAND_COOLDOWN_RATE,
+            ParserUtil.FLOAT_PARSER,
+            f"Cooldown (in seconds) that a user must wait before using this command after using it [{GamemodeConfig.COMMAND_COOLDOWN_PER}] times",
             0
+        )
+        self._add_config_option(
+            GamemodeConfig.COMMAND_COOLDOWN_PER,
+            ParserUtil.INT_PARSER,
+            f"Amount of times a user can use this command before being on cooldown for [{GamemodeConfig.COMMAND_COOLDOWN_RATE}] seconds",
+            1
         )
         self._add_config_option(
             GamemodeConfig.NUMBER_LIVES,

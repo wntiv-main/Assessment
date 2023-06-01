@@ -1,31 +1,39 @@
 from abc import ABC, abstractmethod
-from enum import Enum, IntEnum
 from io import TextIOWrapper
 import os
 from typing import Any, Callable
 
 from logger import Logger
-# from main import SingleplayerGame
 from parserutil import ParserUtil
+
 
 class Config(ABC):
     """
     Class to handle and manage a config file at a specified file path
     using a basic TOML-style config file
     """
+
     logger = Logger("Config")
 
     class Entry:
         """
         Represents an entry within the config file
         """
-        def __init__(self, name: str, validator: ParserUtil.AbstractParser, description: str, default_value):
+
+        def __init__(
+            self,
+            name: str,
+            validator: ParserUtil.AbstractParser,
+            description: str,
+            default_value,
+        ):
             self.name = name
             self.validator = validator
             self.description = description
             self.value = default_value
             self.default_value = default_value
             self.notifiers = []
+
         def when_changed(self, callback: Callable[[str, str], None]):
             """
             Add a listener for when this option is changed. This is called
@@ -34,6 +42,7 @@ class Config(ABC):
             been changed.
             """
             self.notifiers.append(callback)
+
         def write(self, file: TextIOWrapper):
             """
             Write this entry to the supplied file
@@ -43,6 +52,7 @@ class Config(ABC):
             for line in self.description.split("\n"):
                 file.write(f"# {line}\n")
             file.write(f"{self.name}={self.validator.stringify(self.value)}\n\n")
+
         def parse(self, value):
             """
             Parse the given value and check for change
@@ -53,13 +63,14 @@ class Config(ABC):
                 return
             if parsed_value != self.value:
                 Config.logger.debug(
-                    f"Config value '{self.name}' changed to '{parsed_value}' from '{self.value}'")
+                    f"Config value '{self.name}' changed to '{parsed_value}' from '{self.value}'"
+                )
                 old_value = self.value
                 self.value = parsed_value
                 for notifier in self.notifiers:
                     notifier(old_value, parsed_value)
             return self.value
-    
+
     def __init__(self, config_location):
         self.file_location = config_location
         # Options
@@ -73,8 +84,7 @@ class Config(ABC):
                     entry.write(file)
             self.last_read = os.stat(self.file_location).st_mtime
         else:
-            self.logger.info(
-                f"Loading config from file '{self.file_location}'")
+            self.logger.info(f"Loading config from file '{self.file_location}'")
             self.load_from_file()
 
     @abstractmethod
@@ -90,7 +100,9 @@ class Config(ABC):
             case _:
                 self.logger.error("Failed to initialize config option from: ", args)
                 return
-        self.logger.debug(f"Initialised config option '{option.name}' with default value '{option.default_value}'")
+        # self.logger.debug(
+        #     f"Initialised config option '{option.name}' with default value '{option.default_value}'"
+        # )
         self.config_cache[option.name] = option
 
     def load_from_file(self):
@@ -101,24 +113,26 @@ class Config(ABC):
         file = open(self.file_location, "rt")
         self.logger.info(f"Parsing config file at '{self.file_location}'")
         for line in file.readlines():
-            line = line.removesuffix('\n')
+            line = line.removesuffix("\n")
             # Comments, empty lines in config file
-            if line.startswith('#') or not line.strip():
+            if line.startswith("#") or not line.strip():
                 continue
             # Does not follow key=value syntax
-            if '=' not in line:
+            if "=" not in line:
                 self.logger.warn(
-                    f"Invalid syntax in '{self.file_location}', line reads '{line}'!")
+                    f"Invalid syntax in '{self.file_location}', line reads '{line}'!"
+                )
                 continue
             key, value = line.split("=", 1)
             key = key.strip()
             value = value.removeprefix(" ")
-            if (key in self.config_cache):
+            if key in self.config_cache:
                 # Detecting changes
                 self.config_cache[key].parse(value)
             else:
                 self.logger.warn(
-                    f"Unknown config option '{key}', with value '{value}'!")
+                    f"Unknown config option '{key}', with value '{value}'!"
+                )
         self.last_read = os.stat(self.file_location).st_mtime
 
     def check_file_changes(self):

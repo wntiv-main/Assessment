@@ -1,6 +1,6 @@
 from enum import Enum
 
-from .singleplayer import SingleplayerGame
+from games.singleplayer import SingleplayerGame
 
 
 class Gamemode(Enum):

@@ -1,0 +1,15 @@
+# Gamemode this game should be
+gamemode=singleplayer
+
+# Description of gamemode (shown in discord UI)
+description=Singleplayer hangman
+
+# Cooldown (in seconds) that a user must wait before using this command again
+command_cooldown=10
+
+# Number of lives the player has
+number_of_lives=8
+
+# Path to the word list the game uses
+dictionary_location=./words.txt|./words_alpha.txt|-./profanity-list.txt|-./word-blacklist.txt
+
