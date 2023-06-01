@@ -35,9 +35,9 @@ class ResourceManager(ABC):
         self.state = ResourceManager.State.INITIALIZING
         self.reload_inner()
         self.state = ResourceManager.State.READY
-        self.logger.info(f"Reloading resources for\
-                         {self.__class__.__name__}, took\
-                         {(time.perf_counter() - start_time) * 1000}ms")
+        self.logger.info(f"Reloading resources for "\
+                         f"{self.__class__.__name__}, took "\
+                         f"{(time.perf_counter() - start_time) * 1000}ms")
 
     @abstractmethod
     def reload_inner(self):
@@ -87,8 +87,8 @@ class GamemodeConfigsManager(ResourceManager):
                 guild = "default"
             else:
                 guild = path.parts[0]
-            self.logger.debug(f"Walked to {path} (guild {guild}),\
-                              has {files}")
+            self.logger.debug(f"Walked to {path} (guild {guild}),"\
+                              f" has {files}")
             # Load all config files in dir
             for file in files:
                 full_path = pathlib.Path(root, path, file)
@@ -109,8 +109,8 @@ class GamemodeConfigsManager(ResourceManager):
             guild_id = str(guild.id)
             path = self.path_cache.joinpath(f"./{guild_id}")
             if not path.exists():
-                self.logger.info(f"Initializing for {guild_id} with default\
-                                 gamemodes")
+                self.logger.info(f"Initializing for {guild_id} with default"\
+                                 f" gamemodes")
                 # Create dir and init with default gamemodes
                 self.gamemodes[guild_id] = {}
                 path.mkdir()

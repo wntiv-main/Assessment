@@ -32,8 +32,8 @@ class Player:
             if len(guess) == 1:
                 # Single letter guess
                 if guess in self.guessed:
-                    print(f"You have already guessed '{guess.upper()}',\
-                          try another.")
+                    print(f"You have already guessed '{guess.upper()}',"\
+                          f" try another.")
                     continue
                 self.guessed.append(guess)
                 if guess in self.word:
@@ -49,8 +49,8 @@ class Player:
                 break
             else:
                 if len(guess) > len(self.word):
-                    print(f"Guess '{guess}' cannot be longer than word\
-                          ({len(self.word)} letters)!")
+                    print(f"Guess '{guess}' cannot be longer than word"\
+                          f" ({len(self.word)} letters)!")
                     continue
                 full_word = len(guess) == len(self.word)
                 if guess in self.word:
@@ -60,8 +60,8 @@ class Player:
                         self.progress = list(self.word.upper())
                         self.state = Player.State.WON
                     else:
-                        print(f"The sequence '{guess.upper()}' is in the\
-                              word!")
+                        print(f"The sequence '{guess.upper()}' is in the"\
+                              f" word!")
                         for char in guess:
                             self.guessed.append(char)
                             for i in range(len(self.word)):

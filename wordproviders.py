@@ -67,9 +67,9 @@ class RandomWordProvider(WordProvider, ResourceManager):
                                 map(str.lower,
                                     map(str.strip, 
                                         frozenset(file.readlines())))))
-                            self.logger.debug(f"'{file_path}' removed\
-                                              {len(removed_words)}:\
-                                              {list(removed_words)}")
+                            self.logger.debug(f"'{file_path}' removed "\
+                                              f"{len(removed_words)}: "\
+                                              f"{list(removed_words)}")
                         self.words -= frozenset(
                             map(str.lower, 
                                 map(str.strip, 
@@ -91,8 +91,8 @@ class RandomWordProvider(WordProvider, ResourceManager):
                                 filter(str.isalpha,
                                     map(str.strip,
                                         frozenset(file.readlines())))))
-            self.logger.debug(f"Loading words from '{file_path}', took\
-                              {(time.perf_counter() - start_time) * 1000}ms")
+            self.logger.debug(f"Loading words from '{file_path}', took"\
+                f" {(time.perf_counter() - start_time) * 1000}ms")
         self.words = tuple(self.words)
 
     def get_word(self):

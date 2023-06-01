@@ -43,7 +43,8 @@ class Config(ABC):
             # and handle appropriately
             for line in self.description.split("\n"):
                 file.write(f"# {line}\n")
-            file.write(f"{self.name}={self.validator.stringify(self.value)}\n\n")
+            file.write(f"{self.name}={self.validator.stringify(self.value)}"\
+                       f"\n\n")
 
         def parse(self, value):
             """Parse the given value and check for change"""
@@ -55,7 +56,8 @@ class Config(ABC):
                 parsed_value = self.value
             if parsed_value != self.value:
                 Config.logger.debug(
-                    f"Config value '{self.name}' changed to '{parsed_value}' from '{self.value}'"
+                    f"Config value '{self.name}' changed to '{parsed_value}'"\
+                    f" from '{self.value}'"
                 )
                 old_value = self.value
                 self.value = parsed_value
@@ -77,8 +79,8 @@ class Config(ABC):
                     entry.write(file)
             self.last_read = os.stat(self.file_location).st_mtime
         else:
-            self.logger.info(f"Loading config from file\
-                             '{self.file_location}'")
+            self.logger.info(f"Loading config from file "\
+                             f"'{self.file_location}'")
             self.load_from_file()
 
     @abstractmethod
@@ -112,8 +114,8 @@ class Config(ABC):
             # Does not follow key=value syntax
             if "=" not in line:
                 self.logger.warn(
-                    f"Invalid syntax in '{self.file_location}', line reads '{line}'!"
-                )
+                    f"Invalid syntax in '{self.file_location}', "\
+                    f"line reads '{line}'!")
                 continue
             key, value = line.split("=", 1)
             key = key.strip()

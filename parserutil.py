@@ -42,8 +42,8 @@ class ParserUtil:
             try:
                 return self.enum[value.upper()]
             except KeyError as e:
-                error = ValueError(f"{value} is not a valid option for\
-                                   {self.enum.__name__} enum!")
+                error = ValueError(f"{value} is not a valid option for"\
+                                   f" {self.enum.__name__} enum!")
                 error.__cause__ = e
                 raise error
 

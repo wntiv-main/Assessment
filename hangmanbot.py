@@ -86,9 +86,9 @@ class HangmanBot(Bot):
             ctx.send(
                 embed=Embed(
                     title="Invalid option!",
-                    description="That gamemode doesn't exist (yet). Please\
-                    try again, or if you think that this is and error,\
-                    contact an administrator. Valid options are:",
+                    description="That gamemode doesn't exist (yet). Please "\
+                    "try again, or if you think that this is and error, "\
+                    "contact an administrator. Valid options are:",
                     color=Color.from_rgb(255, 0, 0),
                     fields=[
                         EmbedField(
