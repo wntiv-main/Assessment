@@ -85,7 +85,7 @@ class SingleplayerGame(Game):
         super().__init__(config)
         self.random = RandomWordProvider(
             lambda: self.config.get_value(
-                cfg.GamemodeConfig.DICTIONARY_LOCATION))
+                cfg.GamemodeConfig.WORD_LIST_PATHS))
         self.player = Player(self.random.get_word(),
             self.config.get_value(cfg.GamemodeConfig.NUMBER_LIVES))
 

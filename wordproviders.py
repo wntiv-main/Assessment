@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 import random
 import time
 from typing import Callable
@@ -45,7 +46,12 @@ class RandomWordProvider(WordProvider, ResourceManager):
             elif file_path.startswith("&"):
                 file_path = file_path.removeprefix("&")
                 list_type = "whitelist"
-            with open(file_path) as file:
+            file_path = Path(file_path)
+            if not file_path.exists() or not file_path.is_file():
+                self.logger.warn(f"File '{file_path}' does not exist while"\
+                                 f" loading word list")
+                continue
+            with file_path.open() as file:
                 match list_type:
                     case "blacklist":
                         # Remove anything in this list
@@ -56,9 +62,6 @@ class RandomWordProvider(WordProvider, ResourceManager):
                         # the runtime can stay in C code for longer, and does
                         # not have to switch back out into the Python code
                         # (e.g. lambda) as often
-                        # self.words -= frozenset(
-                        #     map(lambda word: word.strip().lower(),
-                        #         frozenset(file.readlines())))
                         if self.logger.is_debug():
                             # Calculating what words are going to be removed
                             # is slower, only do so if the logs are going to

@@ -9,7 +9,7 @@ class GamemodeConfig(Config):
     COMMAND_COOLDOWN_RATE = "command_cooldown_rate"
     COMMAND_COOLDOWN_PER = "command_cooldown_per"
     NUMBER_LIVES = "number_of_lives"
-    DICTIONARY_LOCATION = "dictionary_location"
+    WORD_LIST_PATHS = "word_list_paths"
 
     def _add_config_options(self):
         self._add_config_option(
@@ -46,9 +46,9 @@ class GamemodeConfig(Config):
             8
         )
         self._add_config_option(
-            GamemodeConfig.DICTIONARY_LOCATION,
+            GamemodeConfig.WORD_LIST_PATHS,
             ParserUtil.STRING_LIST_PARSER,
-            "Path to the word list the game uses",
+            "Paths to the word lists the game uses",
             ["./words.txt", "./words_alpha.txt",
              "-./profanity-list.txt", "-./word-blacklist.txt"]
         )

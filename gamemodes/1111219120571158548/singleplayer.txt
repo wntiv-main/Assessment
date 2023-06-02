@@ -11,5 +11,5 @@ command_cooldown=10
 number_of_lives=8
 
 # Path to the word list the game uses
-dictionary_location=./words.txt|./words_alpha.txt|-./profanity-list.txt|-./word-blacklist.txt
+word_list_paths=./words.txt|./words_alpha.txt|-./profanity-list.txt|-./word-blacklist.txt
 

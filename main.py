@@ -15,5 +15,5 @@ Gamemode.SINGLEPLAYER.value(
 # # game = SingleplayerGame(BotConfig("./config.txt"))
 # # game.run()
 
-# bot = HangmanBot(BotConfig("./config.txt"))
+bot = HangmanBot(BotConfig("./config.txt"))
 # bot.run()
