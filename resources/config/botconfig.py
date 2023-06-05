@@ -1,4 +1,4 @@
-from config.config import Config
+from resources.config.config import Config
 from parserutil import ParserUtil
 
 

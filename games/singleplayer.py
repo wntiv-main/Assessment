@@ -1,6 +1,7 @@
 from enum import IntEnum
 
-import config as cfg
+import resources.config as cfg
+from resources.wordlistmanager import WordListManager
 from wordproviders import RandomWordProvider
 from games.game import Game
 
@@ -83,9 +84,11 @@ class SingleplayerGame(Game):
     """Represents an ongoing singleplayer game"""
     def __init__(self, config: 'cfg.GamemodeConfig'):
         super().__init__(config)
-        self.random = RandomWordProvider(
-            lambda: self.config.get_value(
+        self.word_list = WordListManager(lambda: self.config.get_value(
                 cfg.GamemodeConfig.WORD_LIST_PATHS))
+        config.get_option(cfg.GamemodeConfig.WORD_LIST_PATHS).when_changed(
+            lambda *_: self.word_list.reload())
+        self.random = RandomWordProvider(self.word_list)
         self.player = Player(self.random.get_word(),
             self.config.get_value(cfg.GamemodeConfig.NUMBER_LIVES))
 

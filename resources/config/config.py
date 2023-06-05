@@ -5,9 +5,10 @@ from typing import Any, Callable
 
 from logger import Logger
 from parserutil import ParserUtil
+from resources.resourcemanager import ResourceManager
 
 
-class Config(ABC):
+class Config(ResourceManager):
     """Class to handle and manage a config file at a specified file
     path using a basic TOML-style config file
     """
@@ -79,9 +80,9 @@ class Config(ABC):
                     entry.write(file)
             self.last_read = os.stat(self.file_location).st_mtime
         else:
-            self.logger.info(f"Loading config from file "\
+            self.logger.debug(f"Loading config from file "\
                              f"'{self.file_location}'")
-            self.load_from_file()
+            self.reload()
 
     @abstractmethod
     def _add_config_options(self):
@@ -101,11 +102,11 @@ class Config(ABC):
                 return
         self.config_cache[option.name] = option
 
-    def load_from_file(self):
+    def reload_inner(self):
         """Reads the entire file and populates the config cache"""
         # Open file
         file = open(self.file_location, "rt")
-        self.logger.info(f"Parsing config file at '{self.file_location}'")
+        self.logger.debug(f"Parsing config file at '{self.file_location}'")
         for line in file.readlines():
             line = line.removesuffix("\n")
             # Comments, empty lines in config file
@@ -133,7 +134,7 @@ class Config(ABC):
         """Reload the config file if it has changed since we last read"""
         # Check if config file has been updated
         if os.stat(self.file_location).st_mtime > self.last_read:
-            self.load_from_file()
+            self.reload()
 
     def get_option(self, key: str) -> Entry:
         """Get an entry in the config file"""
