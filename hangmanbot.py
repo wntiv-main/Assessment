@@ -8,7 +8,7 @@ from discord.utils import basic_autocomplete
 
 import resources.config as cfg
 from logger import Logger
-from resources.gmconfigsmanager import GamemodeConfigsManager
+from resources.serverconfigmanager import GamemodeConfigsManager
 
 
 class HangmanBot(Bot):

@@ -6,14 +6,23 @@ from discord import Guild
 
 import os
 import pathlib
+from pathlib import Path
 import shutil
 from typing import Callable, Iterable, Mapping
 
+class ServerConfigManager(ResourceManager):
+    def __init__(self, path: Path, guild_id: int):
+        self.path = path
+
+    def reload_inner(self):
+        pass
+
+    def close(self):
+        pass
 
 class GamemodeConfigsManager(ResourceManager):
-    """Resource Manager for the gamemode configs directory,
-    which handles the configs for every single gamemode in
-    every single server.
+    """Resource Manager for the gamemode configs directory, which
+    handles the configs for every single gamemode in a server.
     """
     logger = Logger("GamemodesConfigManager")
 
