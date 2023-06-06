@@ -11,15 +11,27 @@ import shutil
 from typing import Callable, Iterable, Mapping
 
 class ServerConfigManager(ResourceManager):
+    logger = Logger("ServerConfigManager")
+
     def __init__(self, path: Path, guild_id: int):
+        super().__init__()
         self.path = path
+        self.id = guild_id
+        self.gamemodes: dict[str, config.GamemodeConfig] = {}
 
     def reload_inner(self):
-        pass
+        # Recursive walk of dir tree
+        for child in self.path.rglob("*"):
+            if child.is_file():
+                self.gamemodes[child.stem] = config.GamemodeConfig(
+                    child.absolute())
+                # TODO: Setup discord commands here
 
     def close(self):
         pass
 
+
+# TODO: REMOVE
 class GamemodeConfigsManager(ResourceManager):
     """Resource Manager for the gamemode configs directory, which
     handles the configs for every single gamemode in a server.
