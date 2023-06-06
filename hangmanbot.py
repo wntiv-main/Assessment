@@ -9,6 +9,7 @@ from discord.utils import basic_autocomplete
 import resources.config as cfg
 from logger import Logger
 from resources.serverconfigmanager import GamemodeConfigsManager
+from resources.servermanager import ServerManager
 
 
 class HangmanBot(Bot):
@@ -22,16 +23,14 @@ class HangmanBot(Bot):
         intents.dm_messages = True
         super().__init__("Hangman game for Discord", intents=intents)
 
-        self.play_commands: dict[int, SlashCommand] = {}
-
         # self.add_application_command(self.play)
         self.config_command = SlashCommandGroup(
             "config", "Configure options for hangman"
         )
 
-        self.gamemodes_manager = GamemodeConfigsManager(
-            lambda: self.config.get_value(cfg.BotConfig.GAMEMODES_DIR),
-            self._on_update_configs
+        self.configs_manager = ServerManager(
+            self,
+            lambda: self.config.get_value(cfg.BotConfig.GAMEMODES_DIR)
         )
 
         # self.add_application_command(self.play_command)

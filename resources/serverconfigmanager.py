@@ -1,8 +1,9 @@
+from games.game import Game
 import resources.config as config
 from logger import Logger
 from resources.resourcemanager import ResourceManager
 
-from discord import Guild
+from discord import ApplicationContext, Color, Embed, EmbedField, Guild, Option, OptionChoice, SlashCommand
 
 import os
 import pathlib
@@ -18,17 +19,60 @@ class ServerConfigManager(ResourceManager):
         self.path = path
         self.id = guild_id
         self.gamemodes: dict[str, config.GamemodeConfig] = {}
+        self.play_command = None
 
     def reload_inner(self):
         # Recursive walk of dir tree
         for child in self.path.rglob("*"):
             if child.is_file():
-                self.gamemodes[child.stem] = config.GamemodeConfig(
-                    child.absolute())
+                self.gamemodes[child.stem] = config.GamemodeConfig(child)
+                self.play_command = SlashCommand(
+                    self.play_command,
+                    name="play",
+                    description="Start a game of hangman!",
+                    guild_ids=[self.id],
+                    guild_only=True,
+                    options=[Option(
+                        str,
+                        name="gamemode",
+                        description="The gamemode you want to play",
+                        choices=[OptionChoice(name, cfg.get_value(
+                                    config.GamemodeConfig.DESCRIPTION))
+                                 for name, cfg in self.gamemodes.items()])]
+                )
                 # TODO: Setup discord commands here
 
     def close(self):
+        # Clear all discord commands
         pass
+
+    async def play(self, ctx: ApplicationContext, gamemode: str):
+        if gamemode not in self.gamemodes:
+            await ctx.send(
+                embed=Embed(
+                    title="Invalid option!",
+                    description="That gamemode doesn't exist (yet). "
+                    + "Please try again, or if you think that this is "
+                    + "an error, contact an administrator. Valid "
+                    + "options are:",
+                    color=Color.from_rgb(255, 0, 0),
+                    fields=[
+                        EmbedField(
+                            name=name,
+                            value=config.get_value(
+                                config.GamemodeConfig.DESCRIPTION)
+                        )
+                        for name, config in self.gamemodes.items()
+                    ],
+                )
+            )
+            return
+        gamemode_config = self.gamemodes[gamemode]
+        # Game play...
+        game_ctor: type[Game] = gamemode_config.get_value(
+            config.GamemodeConfig.GAME_TYPE).value
+        game = game_ctor(gamemode)
+        # TODO: game.run()
 
 
 # TODO: REMOVE

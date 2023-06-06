@@ -41,9 +41,7 @@ class ServerManager(ResourceManager):
                 self.servers[guild] = ServerConfigManager(child, guild)
             elif child.is_file():
                 # File in root dir, treat as config for default gamemode
-                # TODO: Config should accept Path not str
-                self.default_configs.append(
-                    config.GamemodeConfig(child.absolute()))
+                self.default_configs.append(config.GamemodeConfig(child))
             else:
                 # Not supported yet.
                 pass

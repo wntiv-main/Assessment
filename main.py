@@ -2,6 +2,7 @@
 # AS91896 Programming Assignment
 # Version 1
 
+from pathlib import Path
 from resources.config import GamemodeConfig
 from games import Gamemode
 
@@ -15,5 +16,5 @@ from hangmanbot import HangmanBot
 # # game = SingleplayerGame(BotConfig("./config.txt"))
 # # game.run()
 
-bot = HangmanBot(BotConfig("./config.txt"))
+bot = HangmanBot(BotConfig(Path("./config.txt")))
 bot.run()

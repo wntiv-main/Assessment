@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from enum import IntEnum
 import time
 
-
 from logger import Logger
 
 
