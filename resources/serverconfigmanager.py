@@ -1,15 +1,18 @@
-from games.game import Game
-import resources.config as config
-from logger import Logger
-from resources.resourcemanager import ResourceManager
-
-from discord import ApplicationContext, Color, Embed, EmbedField, Guild, Option, OptionChoice, SlashCommand
-
 import os
 import pathlib
 from pathlib import Path
 import shutil
 from typing import Callable, Iterable, Mapping
+
+from discord import (
+    ApplicationContext, Color, Embed, EmbedField, Guild, Option, OptionChoice,
+    SlashCommand, ApplicationCommandMixin
+)
+from games.game import Game
+import resources.config as config
+from logger import Logger
+from resources.resourcemanager import ResourceManager
+
 
 class ServerConfigManager(ResourceManager):
     logger = Logger("ServerConfigManager")
@@ -19,32 +22,35 @@ class ServerConfigManager(ResourceManager):
         self.path = path
         self.id = guild_id
         self.gamemodes: dict[str, config.GamemodeConfig] = {}
-        self.play_command = None
+        self.play_command = SlashCommand(
+            self.play,
+            name="play",
+            description="Start a game of hangman!",
+            guild_ids=[self.id],
+            guild_only=True,
+            options=[Option(
+                str,
+                name="gamemode",
+                description="The gamemode you want to play",
+                choices=[]
+            )]
+        )
 
     def reload_inner(self):
         # Recursive walk of dir tree
         for child in self.path.rglob("*"):
             if child.is_file():
                 self.gamemodes[child.stem] = config.GamemodeConfig(child)
-                self.play_command = SlashCommand(
-                    self.play_command,
-                    name="play",
-                    description="Start a game of hangman!",
-                    guild_ids=[self.id],
-                    guild_only=True,
-                    options=[Option(
-                        str,
-                        name="gamemode",
-                        description="The gamemode you want to play",
-                        choices=[OptionChoice(name, cfg.get_value(
-                                    config.GamemodeConfig.DESCRIPTION))
-                                 for name, cfg in self.gamemodes.items()])]
-                )
-                # TODO: Setup discord commands here
+                self.play_command.options[0].choices = [
+                    OptionChoice(name, cfg.get_value(
+                        config.GamemodeConfig.DESCRIPTION))
+                    for name, cfg in self.gamemodes.items()]
 
-    def close(self):
-        # Clear all discord commands
-        pass
+    def add_command_to(self, bot: ApplicationCommandMixin):
+        bot.add_application_command(self.play_command)
+
+    def remove_command_from(self, bot: ApplicationCommandMixin):
+        bot.remove_application_command(self.play_command)
 
     async def play(self, ctx: ApplicationContext, gamemode: str):
         if gamemode not in self.gamemodes:

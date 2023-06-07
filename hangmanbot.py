@@ -36,63 +36,6 @@ class HangmanBot(Bot):
         # self.add_application_command(self.play_command)
         self.add_application_command(self.config_command)
 
-    def _on_update_configs(self, guild: int, configs: Mapping[int, cfg.GamemodeConfig]):
-        self.logger.debug(f"Updating play command for guild {guild}")
-
-        if guild in self.play_commands:
-            self.remove_application_command(self.play_commands[guild])
-
-        @slash_command(description="Start a game of hangman!",
-                       guild_ids=[guild],
-                       guild_only=True)
-        async def play(ctx: ApplicationContext,
-                       gamemode: Option(
-                            SlashCommandOptionType.string,
-                            choices=[
-                                OptionChoice(name, config.get_value(cfg.GamemodeConfig.DESCRIPTION))
-                                for name, config in configs.items()
-                            ],
-                            required=True,
-                       )):
-            if gamemode not in configs:
-                await ctx.send(
-                    embed=Embed(
-                        title="Invalid option!",
-                        description="That gamemode doesn't exist (yet). Please "\
-                        "try again, or if you think that this is and error, "\
-                        "contact an administrator. Valid options are:",
-                        color=Color.from_rgb(255, 0, 0),
-                        fields=[
-                            EmbedField(
-                                name=name,
-                                value=config.get_value(
-                                    cfg.GamemodeConfig.DESCRIPTION)
-                            )
-                            for name, config in configs.items()
-                        ],
-                    )
-                )
-            else:
-                await self.play(ctx, configs[gamemode])
-
-        self.play_commands[guild] = play
-        self.add_application_command(self.play_commands[guild])
-        # TODO: TALK TO DISCORD
-        # self.register_commands([self.play_commands[guild]])
-        # self.play_command.add_command(
-        #     SlashCommand(
-        #         callback,
-        #         name=name,
-        #         description=config.get_value(cfg.GamemodeConfig.DESCRIPTION),
-        #         cooldown=CooldownMapping.from_cooldown(
-        #             rate=config.get_value(cfg.GamemodeConfig.COMMAND_COOLDOWN_RATE),
-        #             per=config.get_value(cfg.GamemodeConfig.COMMAND_COOLDOWN_PER),
-        #             type=BucketType.member
-        #         ),
-        #         guild_ids=[guild],
-        #     )
-        # )
-
     def run(self) -> None:
         """Run the bot. Blocking call."""
         super().run(
@@ -102,7 +45,7 @@ class HangmanBot(Bot):
 
     async def on_ready(self):
         """Called when bot is connected to the Discord Gateway and ready"""
-        self.gamemodes_manager.init_for_guilds(self.guilds)
+        self.configs_manager.init_for_guilds(self.guilds)
 
     async def play(ctx: ApplicationContext,
                    gamemode: cfg.GamemodeConfig):
