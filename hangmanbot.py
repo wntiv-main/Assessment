@@ -33,6 +33,8 @@ class HangmanBot(Bot):
             lambda: self.config.get_value(cfg.BotConfig.GAMEMODES_DIR)
         )
 
+        self.configs_manager.hook_ready()
+
         # self.add_application_command(self.play_command)
         self.add_application_command(self.config_command)
 
@@ -47,14 +49,8 @@ class HangmanBot(Bot):
         """Called when bot is connected to the Discord Gateway and ready"""
         self.configs_manager.init_for_guilds(self.guilds)
 
-    async def play(ctx: ApplicationContext,
-                   gamemode: cfg.GamemodeConfig):
-        """Start a game"""
-        # Call relevant Game constructor
-        game = gamemode.get_value(cfg.GamemodeConfig.GAME_TYPE)\
-                .value(gamemode)
-        # Run game
-        game.run(ctx)
+    async def on_guild_join(self):
+        pass
 
     def on_message(self):
         ...

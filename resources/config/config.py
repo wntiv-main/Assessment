@@ -10,7 +10,8 @@ from resources.resourcemanager import ResourceManager
 
 
 class Config(ResourceManager):
-    """Class to handle and manage a config file at a specified file
+    """
+    Class to handle and manage a config file at a specified file
     path using a basic TOML-style config file
     """
     logger = Logger("Config")
@@ -69,28 +70,29 @@ class Config(ResourceManager):
             return self.value
 
     def __init__(self, config_location: Path):
-        self._file_location = config_location
+        self._path = config_location
         # Options
         self._config_cache = {}
         self._add_config_options()
         self._last_read = None
         # Create a default config file if one does not exist
-        if not self._file_location.exists():
+        if not self._path.exists():
             self.logger.info("No config file found, creating default")
-            with self._file_location.open("x") as file:
+            with self._path.open("x") as file:
                 for entry in self._config_cache.values():
                     entry.write(file)
-            self._last_read = self._file_location.stat().st_mtime
+            self._last_read = self._path.stat().st_mtime
         else:
             self.logger.debug(f"Loading config from file "\
-                             f"'{self._file_location}'")
+                             f"'{self._path}'")
             self.reload()
 
     @abstractmethod
     def _add_config_options(self):
-        # Subclasses should override this to initialize all their
-        # config entries
-        pass
+        """
+        Subclasses should override this to initialize all their
+        config entries
+        """
 
     def _add_config_option(self, *args):
         match args:
@@ -104,38 +106,45 @@ class Config(ResourceManager):
                 return
         self._config_cache[option.name] = option
 
-    def reload_inner(self) -> None:
+    def _reload_inner(self) -> None:
         """Reads the entire file and populates the config cache"""
-        # Open file
-        with self._file_location.open("rt") as file:
-            self.logger.debug(f"Parsing config file at '{self._file_location}'")
-            for line in file.readlines():
-                line = line.removesuffix("\n")
-                # Comments, empty lines in config file
-                if line.startswith("#") or not line.strip():
-                    continue
-                # Does not follow key=value syntax
-                if "=" not in line:
-                    self.logger.warn(
-                        f"Invalid syntax in '{self._file_location}', "\
-                        f"line reads '{line}'!")
-                    continue
-                key, value = line.split("=", 1)
-                key = key.strip()
-                value = value.removeprefix(" ")
-                if key in self._config_cache:
-                    # Detecting changes
-                    self._config_cache[key].parse(value)
-                else:
-                    self.logger.warn(
-                        f"Unknown config option '{key}', with value '{value}'!"
-                    )
-        self._last_read = self._file_location.stat().st_mtime
+        try:
+            # Open file
+            with self._path.open("rt") as file:
+                self.logger.debug(f"Parsing config file at '{self._path}'")
+                for line in file.readlines():
+                    line = line.removesuffix("\n")
+                    # Comments, empty lines in config file
+                    if line.startswith("#") or not line.strip():
+                        continue
+                    # Does not follow key=value syntax
+                    if "=" not in line:
+                        self.logger.warn(
+                            f"Invalid syntax in '{self._path}', "\
+                            f"line reads '{line}'!")
+                        continue
+                    key, value = line.split("=", 1)
+                    key = key.strip()
+                    value = value.removeprefix(" ")
+                    if key in self._config_cache:
+                        # Detecting changes
+                        self._config_cache[key].parse(value)
+                    else:
+                        self.logger.warn(
+                            f"Unknown config option '{key}', with value '{value}'!"
+                        )
+            self._last_read = self._path.stat().st_mtime
+        except FileNotFoundError as f:
+            self.logger.error(f"File does not exist at {self._path}: {f}")
+            self.state = ResourceManager.State.REMOVED
 
     def check_file_changes(self) -> None:
         """Reload the config file if it has changed since we last read"""
         # Check if config file has been updated
-        if self._file_location.stat().st_mtime > self._last_read:
+        if not self._path.exists():
+            self.logger.warn(f"File does not exist at {self._path}")
+            self.state = ResourceManager.State.REMOVED
+        if self._path.stat().st_mtime > self._last_read:
             self.reload()
 
     def get_option(self, key: str) -> Entry:

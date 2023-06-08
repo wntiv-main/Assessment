@@ -19,7 +19,7 @@ class WordListManager(ResourceManager):
         self.file_paths = file_path_provider
         self.words = ()
 
-    def reload_inner(self):
+    def _reload_inner(self):
         """Parse all files and assemble word list"""
         # Setup word list
         # Use HashSet instead of list, as order does not matter and

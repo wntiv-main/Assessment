@@ -36,15 +36,39 @@ class ServerConfigManager(ResourceManager):
             )]
         )
 
-    def reload_inner(self):
+    def _reload_inner(self):
         # Recursive walk of dir tree
         for child in self.path.rglob("*"):
+            # Only open config files
             if child.is_file():
-                self.gamemodes[child.stem] = config.GamemodeConfig(child)
-                self.play_command.options[0].choices = [
-                    OptionChoice(name, cfg.get_value(
-                        config.GamemodeConfig.DESCRIPTION))
-                    for name, cfg in self.gamemodes.items()]
+                if child.stem not in self.gamemodes:
+                    # New files in dir
+                    self.gamemodes[child.stem] = config.GamemodeConfig(child)
+                else:
+                    # Changes to old files in dir
+                    self.gamemodes[child.stem].check_file_changes()
+                    # Deleted files in dir
+                    if (self.gamemodes[child.stem].state
+                        == ResourceManager.State.REMOVED):
+                        del self.gamemodes[child.stem]
+        self.play_command.options[0].choices = [
+            OptionChoice(name, cfg.get_value(
+                config.GamemodeConfig.DESCRIPTION))
+            for name, cfg in self.gamemodes.items()]
+    
+    def load_defaults(self, default_configs: Iterable[Path]):
+        if self.state != ResourceManager.State.READY or not self.path.exists():
+            self.path.mkdir()
+            for file in default_configs:
+                new_path = self.path.joinpath(file)
+                shutil.copy(file.absolute(), new_path)
+                cfg = config.GamemodeConfig(new_path)
+                self.gamemodes[file.stem] = cfg
+            self.play_command.options[0].choices = [
+                OptionChoice(name, cfg.get_value(
+                    config.GamemodeConfig.DESCRIPTION))
+                for name, cfg in self.gamemodes.items()]
+            self.state = ResourceManager.State.READY
 
     def add_command_to(self, bot: ApplicationCommandMixin):
         bot.add_application_command(self.play_command)
@@ -58,9 +82,9 @@ class ServerConfigManager(ResourceManager):
                 embed=Embed(
                     title="Invalid option!",
                     description="That gamemode doesn't exist (yet). "
-                    + "Please try again, or if you think that this is "
-                    + "an error, contact an administrator. Valid "
-                    + "options are:",
+                    "Please try again, or if you think that this is "
+                    "an error, contact an administrator. Valid "
+                    "options are:",
                     color=Color.from_rgb(255, 0, 0),
                     fields=[
                         EmbedField(
@@ -97,7 +121,7 @@ class GamemodeConfigsManager(ResourceManager):
         self.path_cache = None
         self.update_config_callback = on_update_config
 
-    def reload_inner(self):
+    def _reload_inner(self):
         root = self.path_cache = pathlib.Path(self.file_path())
         os.makedirs(root, exist_ok=True)
         for path, subdirs, files in os.walk(root.absolute()):
