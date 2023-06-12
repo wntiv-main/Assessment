@@ -1,7 +1,7 @@
 
 from pathlib import Path
 import time
-from typing import Callable
+from typing import Callable, Coroutine
 from logger import Logger
 from resources.resourcemanager import ResourceManager
 
@@ -13,13 +13,14 @@ class WordListManager(ResourceManager):
     """
     logger = Logger("WordListManager")
 
-    def __init__(self, file_path_provider: Callable[[], list[str]]):
-        super().__init__()
+    def __init__(self, file_path_provider: Callable[[], list[str]],
+                 task_handler: Callable[[Coroutine], None]):
+        super().__init__(task_handler)
         # Defer word list loading as it could be slow
         self.file_paths = file_path_provider
         self.words = ()
 
-    def _reload_inner(self):
+    async def _reload_inner(self):
         """Parse all files and assemble word list"""
         # Setup word list
         # Use HashSet instead of list, as order does not matter and

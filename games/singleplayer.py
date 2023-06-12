@@ -1,4 +1,7 @@
 from enum import IntEnum
+from typing import Callable, Coroutine
+
+from discord import Bot, Interaction, Message
 
 import resources.config as cfg
 from resources.wordlistmanager import WordListManager
@@ -82,25 +85,30 @@ class Player:
 
 class SingleplayerGame(Game):
     """Represents an ongoing singleplayer game"""
-    def __init__(self, config: 'cfg.GamemodeConfig'):
-        super().__init__(config)
-        self.word_list = WordListManager(lambda: self.config.get_value(
-                cfg.GamemodeConfig.WORD_LIST_PATHS))
+    def __init__(self, config: 'cfg.GamemodeConfig',
+                 task_handler: Callable[[Coroutine], None]):
+        super().__init__(config, task_handler)
+        self.word_list = WordListManager(
+            lambda: self.config.get_value(cfg.GamemodeConfig.WORD_LIST_PATHS),
+            self.task_handler)
         config.get_option(cfg.GamemodeConfig.WORD_LIST_PATHS).when_changed(
             lambda *_: self.word_list.reload())
         self.random = RandomWordProvider(self.word_list)
         self.player = Player(self.random.get_word(),
             self.config.get_value(cfg.GamemodeConfig.NUMBER_LIVES))
 
-    def run(self):
+    async def _update_inner(self, msg: Message, bot: Bot):
+        await super()._update_inner(msg, bot)
+
+    async def run(self, ctx: Interaction):
         """Run the game"""
-        while self.player.state == Player.State.PLAYING:
-            print(f"You have {self.player.lives} lives remaining")
-            self.player.turn()
-            self.config.check_file_changes()
-        match self.player.state:
-            case Player.State.WON:
-                self.player.output_progress()
-                print("YOU WIN!!!")
-            case Player.State.DEAD:
-                print(f"YOU LOST! The word was '{self.player.word}'")
+        await super().run(ctx)
+        # while self.player.state == Player.State.PLAYING:
+        #     await self.channel.send(f"You have {self.player.lives} lives remaining")
+        #     self.player.turn()
+        # match self.player.state:
+        #     case Player.State.WON:
+        #         self.player.output_progress()
+        #         await self.channel.send("YOU WIN!!!")
+        #     case Player.State.DEAD:
+        #         await self.channel.send(f"YOU LOST! The word was '{self.player.word}'")

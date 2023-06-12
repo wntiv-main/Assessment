@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from resources.config.config import Config
 from parserutil import ParserUtil
 
@@ -10,9 +12,9 @@ class BotConfig(Config):
     def _add_config_options(self):
         self._add_config_option(
             BotConfig.GAMEMODES_DIR,
-            ParserUtil.STRING_PARSER,
+            ParserUtil.PATH_PARSER,
             "Directory to load gamemode configs from",
-            "./gamemodes/"
+            Path("./config/")
         )
         self._add_config_option(
             BotConfig.DISCORD_TOKEN,

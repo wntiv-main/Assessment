@@ -4,9 +4,6 @@ gamemode=singleplayer
 # Description of gamemode (shown in discord UI)
 description=Singleplayer hangman but it's only bad words
 
-# Cooldown (in seconds) that a user must wait before using this command again
-command_cooldown=60
-
 # Number of lives the player has
 number_of_lives=8
 

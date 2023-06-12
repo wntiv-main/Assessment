@@ -1,56 +1,68 @@
-from typing import Mapping
-from discord import AutocompleteContext, Bot, Embed, Intents,\
-    ApplicationContext, Option, OptionChoice, SlashCommandGroup, SlashCommand,\
-    Color, EmbedField, SlashCommandOptionType
-from discord.ext.commands import Cooldown, CooldownMapping, BucketType,\
-    slash_command
-from discord.utils import basic_autocomplete
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from threading import Thread
+from typing import Coroutine
+from discord import Bot, Guild, Intents, Message
 
 import resources.config as cfg
 from logger import Logger
-from resources.serverconfigmanager import GamemodeConfigsManager
-from resources.servermanager import ServerManager
+from resources.serverlistmanager import ServerListManager
 
 
 class HangmanBot(Bot):
     """Discord bot implementation"""
     logger = Logger("HangmanBot")
-    def __init__(self, config: cfg.BotConfig):
-        self.config = config
+
+    def __init__(self, config_path: Path):
         intents = Intents.none()
+        intents.messages = True
         intents.message_content = True
         intents.guilds = True
         intents.dm_messages = True
         super().__init__("Hangman game for Discord", intents=intents)
 
-        # self.add_application_command(self.play)
-        self.config_command = SlashCommandGroup(
-            "config", "Configure options for hangman"
-        )
+        self._resources_loop = asyncio.new_event_loop()
+        self._tasks = set()
+        self._thread = Thread(
+            target=self._resources_thread,
+            name="Resource Loader")
+        self._resources_executor = ThreadPoolExecutor(4, "ResourceLoader")
 
-        self.configs_manager = ServerManager(
+        self.config = cfg.BotConfig(config_path, self._run_task_on_resources)
+
+        self.server_manager = ServerListManager(
             self,
-            lambda: self.config.get_value(cfg.BotConfig.GAMEMODES_DIR)
+            lambda: self.config.get_value(cfg.BotConfig.GAMEMODES_DIR),
+            self._run_task_on_resources
         )
-
-        self.configs_manager.hook_ready()
-
-        # self.add_application_command(self.play_command)
-        self.add_application_command(self.config_command)
 
     def run(self) -> None:
         """Run the bot. Blocking call."""
+        self._thread.start()
         super().run(
             self.config.get_value(cfg.BotConfig.DISCORD_TOKEN),
             reconnect=True
         )
 
+    def _resources_thread(self):
+        asyncio.set_event_loop(self._resources_loop)
+        self._resources_loop.run_forever()
+
+    def _run_task_on_resources(self, coro: Coroutine):
+        self._resources_loop.run_in_executor(
+            self._resources_executor,
+            asyncio.run,
+            coro)
+
     async def on_ready(self):
         """Called when bot is connected to the Discord Gateway and ready"""
-        self.configs_manager.init_for_guilds(self.guilds)
+        self.logger.info(f"Bot is connected to Discord Gateway")
+        self.server_manager.reload()
 
-    async def on_guild_join(self):
-        pass
+    async def on_guild_join(self, guild: Guild):
+        self.logger.info(f"Joined guild {guild.id}")
+        self.server_manager.new_guild(guild.id)
 
-    def on_message(self):
-        ...
+    async def on_message(self, msg: Message):
+        await self.server_manager.update_servers(msg, self)

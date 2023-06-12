@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
+from asyncio import AbstractEventLoop
+from threading import Event
 from enum import IntEnum
 import time
+from typing import Callable, Coroutine
 
 from logger import Logger
 
@@ -16,45 +19,48 @@ class ResourceManager(ABC):
         READY = 2
         REMOVED = 3
 
-    def __init__(self):
+    def __init__(self, task_handler: Callable[[Coroutine], None]):
+        self.task_handler = task_handler
+        self._ready_event = Event()
         self.state = ResourceManager.State.UNINITIALIZED
 
-    def reload(self):
-        """Reload the resource. This is expected to take a long
-        time as it may need to perform heavy operations. Consider
-        reloading on a seperate thread to the main thread to avoid
-        hanging the entire program runtime.
+    def reload(self) -> Event:
         """
+        Reload the resource on the resource loading thread.
+        
+        This is expected to take a long time as it may need to perform
+        heavy operations. Returns an event which completes when resource
+        reloading is complete.
+        """
+        if self.state != ResourceManager.State.INITIALIZING:
+            self.state = ResourceManager.State.INITIALIZING
+            self._ready_event.clear()
+            self.task_handler(self._reload())
+        return self._ready_event
+
+    async def _reload(self):
         start_time = time.perf_counter()
-        self.state = ResourceManager.State.INITIALIZING
-        self._reload_inner()
+        await self._reload_inner()
         if self.state == ResourceManager.State.INITIALIZING:
             self.state = ResourceManager.State.READY
             self.logger.info(f"Reloading resources for "
                             f"{self.__class__.__name__}, took "
                             f"{(time.perf_counter() - start_time) * 1000}ms")
+            self._ready_event.set()
         else:
             self.logger.warn(f"Reloading resources for "
                              f"{self.__class__.__name__} encountered "
-                             f"unexpected state change to {self.state}")
+                             f"unexpected state change to {self.state.name}")
 
     @abstractmethod
-    def _reload_inner(self):
+    async def _reload_inner(self):
         """Method that subclasses should override to
         implement their task.
         """
         pass
 
-    def hook_ready(self):
-        """Ensure the resource is ready, if not, wait for it"""
-        # For future threading possibility:
-        # May need to synchronize and await for resource
-        # to finish loading so we can use it
-        match self.state:
-            case ResourceManager.State.UNINITIALIZED:
-                self.reload()
-            case ResourceManager.State.INITIALIZING:
-                while self.state != ResourceManager.State.READY:
-                    pass
-            case ResourceManager.State.READY:
-                pass
+    def on_ready(self) -> Event:
+        """Return event waiting for resource ready."""
+        if self.state == ResourceManager.State.UNINITIALIZED:
+            self.reload()
+        return self._ready_event

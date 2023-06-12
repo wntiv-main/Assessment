@@ -8,6 +8,7 @@ class GamemodeConfig(Config):
     DESCRIPTION = "description"
     NUMBER_LIVES = "number_of_lives"
     WORD_LIST_PATHS = "word_list_paths"
+    CREATE_THREAD = "creeate_thread"
 
     def _add_config_options(self):
         self._add_config_option(
@@ -34,4 +35,10 @@ class GamemodeConfig(Config):
             "Paths to the word lists the game uses",
             ["./words.txt", "./words_alpha.txt",
              "-./profanity-list.txt", "-./word-blacklist.txt"]
+        )
+        self._add_config_option(
+            GamemodeConfig.CREATE_THREAD,
+            ParserUtil.BOOL_PARSER,
+            "Whether or not a thread should be created to play the game",
+            True
         )

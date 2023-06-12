@@ -2,6 +2,7 @@ from enum import IntEnum
 import os
 import sys
 from pathlib import Path
+from threading import Lock
 
 # Ensure terminal is correctly set up to handle ANSI escape sequences
 os.system("")
@@ -23,6 +24,8 @@ class Logger:
         Level.WARN: "\033[93m",
         Level.ERROR: "\033[91m"
     }
+
+    lock = Lock()
 
     default_level = Level.DEBUG if "--debug" in sys.argv else Level.INFO
 
@@ -62,9 +65,10 @@ class Logger:
         """All logger output is sent to this function, may be overidden to
         output to file, etc.
         """
-        if self.get_level() <= level:
-            print(f"{Logger.COLORS[level]}[{self.name}:{level.name} in"\
-                  f" {self._traceback()}]", *args, "\033[0m", **kwargs)
+        with self.lock:
+            if self.get_level() <= level:
+                print(f"{Logger.COLORS[level]}[{self.name}:{level.name} in"\
+                    f" {self._traceback()}]", *args, "\033[0m", **kwargs)
 
     def is_debug(self):
         """Return whether logger should display debug messages"""

@@ -23,5 +23,5 @@ class RandomWordProvider(WordProvider):
     def get_word(self):
         """Provide a random word from the list"""
         # Make sure we are ready
-        self.word_list.hook_ready()
+        self.word_list.on_ready().wait()
         return random.choice(self.word_list.words)

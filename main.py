@@ -10,11 +10,11 @@ from games import Gamemode
 from resources.config import BotConfig
 from hangmanbot import HangmanBot
 
-Gamemode.SINGLEPLAYER.value(
-    GamemodeConfig(Path("./gamemodes/singleplayer.txt"))).run()
+# Gamemode.SINGLEPLAYER.value(
+#     GamemodeConfig(Path("./gamemodes/singleplayer.txt"))).run()
 
 # # game = SingleplayerGame(BotConfig("./config.txt"))
 # # game.run()
 
-# bot = HangmanBot(BotConfig(Path("./config.txt")))
-# bot.run()
+bot = HangmanBot(Path("./config.txt"))
+bot.run()
