@@ -1,15 +1,21 @@
+from enum import IntEnum
 from resources.config.config import Config
 from parserutil import ParserUtil
 import games
 
 
 class GamemodeConfig(Config):
+    class Publicity(IntEnum):
+        PRIVATE = 0
+        PUBLIC = 1
+
     DISPLAY_NAME = "display_name"
     GAME_TYPE = "gamemode"
     DESCRIPTION = "description"
     NUMBER_LIVES = "number_of_lives"
     WORD_LIST_PATHS = "word_list_paths"
     CREATE_THREAD = "create_thread"
+    GUESSERS = "guessers"
 
     def _add_config_options(self):
         self._add_config_option(
@@ -48,4 +54,10 @@ class GamemodeConfig(Config):
             ParserUtil.BOOL_PARSER,
             "Whether or not a thread should be created to play the game",
             True
+        )
+        self._add_config_option(
+            GamemodeConfig.GUESSERS,
+            ParserUtil.EnumParser(GamemodeConfig.Publicity),
+            "Can all users guess or only the user who started the game",
+            GamemodeConfig.Publicity.PRIVATE
         )

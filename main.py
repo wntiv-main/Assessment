@@ -1,6 +1,6 @@
-# Callum Hynes - 1/06/2023
+# Callum Hynes 
 # AS91896 Programming Assignment
-# Version 1
+# 1/06/2023 / Version 2
 
 from pathlib import Path
 from resources.config import GamemodeConfig

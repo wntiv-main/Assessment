@@ -18,13 +18,13 @@ def _get_null_event() -> Event:
 class Config(ResourceManager):
     """
     Class to handle and manage a config file at a specified file
-    path using a basic TOML-style config file
+    path using a basic TOML-style config file.
     """
     logger = Logger()
     NULL_EVENT = _get_null_event()
 
     class Entry:
-        """Represents an entry within the config file"""
+        """Represents an entry within the config file."""
         def __init__(
             self,
             name: str,
@@ -32,6 +32,7 @@ class Config(ResourceManager):
             description: str,
             default_value,
         ):
+            """Create an entry within a config file."""
             self.name = name
             self.validator = validator
             self.description = description
@@ -40,10 +41,12 @@ class Config(ResourceManager):
             self.notifiers = []
 
         def when_changed(self, callback: Callable[[str, str], None]):
-            """Add a listener for when this option is changed. This is called
-            with the old value and the new value as parameters. When called,
-            the value of Entry.get_value() for this option will have already
-            been changed.
+            """
+            Add a listener for when this option is changed. 
+            
+            This is called with the old value and the new value as
+            parameters. When called, the value of Entry.get_value() for
+            this option will have already been changed.
             """
             self.notifiers.append(callback)
 
