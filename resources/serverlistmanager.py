@@ -1,4 +1,5 @@
 from asyncio import AbstractEventLoop
+import functools
 import os
 from pathlib import Path
 from typing import Callable, Coroutine
@@ -16,7 +17,7 @@ class ServerListManager(ResourceManager):
     Resource manager to handle all resources for all servers in the
     servers config dirs.
     """
-    logger = Logger("ServerListManager")
+    logger = Logger()
 
     def __init__(self, bot: 'hangmanbot.HangmanBot',
             file_path_provider:  Callable[[], Path],
@@ -49,8 +50,11 @@ class ServerListManager(ResourceManager):
                 if self._bot.get_guild(int(child.name)) is not None:
                     guild = int(child.name)
                     self.logger.info(f"Initing configs for guild {guild}")
-                    manager = ServerManager(child, guild,
-                                                  self.task_handler)
+                    manager = ServerManager(
+                        child,
+                        guild,
+                        self.task_handler,
+                        functools.partial(self.reload_for_guild, guild))
                     manager.add_command_to(self._bot)
                     self._servers[guild] = manager
                     # Manual reload to keep on same thread
@@ -77,7 +81,7 @@ class ServerListManager(ResourceManager):
         """
         if guild_id in self._servers:
             self._servers[guild_id].reload()
-            self.task_handler(self._bot.sync_commands(
+            self._bot.loop.create_task(self._bot.sync_commands(
                 check_guilds=[guild_id]))
         elif self._bot.get_guild(guild_id) is not None:
             self.new_guild(guild_id)
@@ -94,7 +98,8 @@ class ServerListManager(ResourceManager):
             manager = ServerManager(
                 self._file_path().joinpath(f"/{guild_id}"),
                 guild_id,
-                self.task_handler)
+                self.task_handler,
+                functools.partial(self.reload_for_guild, guild_id))
             manager.load_defaults(self.default_configs)
             self._servers[guild_id] = manager
             self._bot.loop.create_task(

@@ -11,7 +11,7 @@ class WordListManager(ResourceManager):
     Files can be blacklist or whitelists applied over current list,
     or just be appended to current list
     """
-    logger = Logger("WordListManager")
+    logger = Logger()
 
     def __init__(self, file_path_provider: Callable[[], list[str]],
                  task_handler: Callable[[Coroutine], None]):

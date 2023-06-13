@@ -10,7 +10,7 @@ from logger import Logger
 
 class ResourceManager(ABC):
     """Class that handles loading and manages a resource"""
-    logger = Logger("ResourceManager")
+    logger = Logger()
 
     class State(IntEnum):
         """The state of the resource"""

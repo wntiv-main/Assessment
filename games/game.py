@@ -7,7 +7,7 @@ from logger import Logger
 
 
 class Game(ABC):
-    logger = Logger("Game")
+    logger = Logger()
 
     def __init__(self, config: 'cfg.GamemodeConfig',
                  task_handler: Callable[[Coroutine], None]):

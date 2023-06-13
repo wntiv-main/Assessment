@@ -4,13 +4,20 @@ import games
 
 
 class GamemodeConfig(Config):
+    DISPLAY_NAME = "display_name"
     GAME_TYPE = "gamemode"
     DESCRIPTION = "description"
     NUMBER_LIVES = "number_of_lives"
     WORD_LIST_PATHS = "word_list_paths"
-    CREATE_THREAD = "creeate_thread"
+    CREATE_THREAD = "create_thread"
 
     def _add_config_options(self):
+        self._add_config_option(
+            GamemodeConfig.DISPLAY_NAME,
+            ParserUtil.EnumParser(games.Gamemode),
+            "Displayed name of this gamemode",
+            "Hangman"
+        )
         self._add_config_option(
             GamemodeConfig.GAME_TYPE,
             ParserUtil.EnumParser(games.Gamemode),

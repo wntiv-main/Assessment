@@ -20,7 +20,7 @@ class Config(ResourceManager):
     Class to handle and manage a config file at a specified file
     path using a basic TOML-style config file
     """
-    logger = Logger("Config")
+    logger = Logger()
     NULL_EVENT = _get_null_event()
 
     class Entry:
@@ -170,3 +170,8 @@ class Config(ResourceManager):
     def get_value(self, key: str, safe=False) -> Any:
         """Get the set value for an option in the config file"""
         return self.get_option(key, safe).value
+
+    def set_value(self, key: str, value: Any) -> None:
+        """Change the value for an option in the config file"""
+        self.get_option(key, True).value = value
+        # TODO: SAVE CHANGES TO FILE

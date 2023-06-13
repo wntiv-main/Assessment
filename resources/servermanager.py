@@ -16,8 +16,12 @@ from resources.resourcemanager import ResourceManager
 
 
 class ServerManager(ResourceManager):
-    logger = Logger("ServerManager")
+    logger = Logger()
     SELECT_GAMEMODE_MSG = "Please select a gamemode"
+    _ALPHABET = "abcdefghijklmnopqrstuvwxyz"
+    _DIGITS = "0123456789"
+    _ALLOWED_FIRST_CHARS = frozenset(_ALPHABET + _ALPHABET.upper())
+    _ALLOWED_CHARS = frozenset(_ALPHABET + _ALPHABET.upper() + _DIGITS + "-_ ")
 
     class GamemodeSelectorView(View):
         def __init__(self, server: 'ServerManager',
@@ -44,8 +48,10 @@ class ServerManager(ResourceManager):
             await self.callback(ctx, select.values[0])
 
     def __init__(self, path: Path, guild_id: int,
-                 task_handler: Callable[[Coroutine], None]):
+                 task_handler: Callable[[Coroutine], None],
+                 reload: Callable[[], None]):
         super().__init__(task_handler)
+        self.sync_discord_commands = reload
         self.path = path
         self.id = guild_id
         self.gamemodes: dict[str, GamemodeConfig] = {}
@@ -104,6 +110,31 @@ class ServerManager(ResourceManager):
             parent=self.config_gamemode_command)
         self.config_gamemode_command.add_command(self.config_new_command)
         self.config_gamemode_command.add_command(self.config_edit_command)
+
+    @staticmethod
+    def _get_name_error(name: str) -> str | None:
+        # Validation checks, ordered by performance
+        if len(name) < 1:
+            return "Gamemode name cannot be empty"
+        if len(name) > 50:
+            return "Gamemode name cannot be longer than 50 chars"
+        # Invalid first char
+        if name[0] not in ServerManager._ALLOWED_FIRST_CHARS:
+            return (f"First letter of name must be alphabetical "
+                    f"(a-z, A-Z), got '{name[0]}'")
+        # Invalid chars
+        invalid_chars = set(name).difference(ServerManager._ALLOWED_CHARS)
+        if invalid_chars:
+            chrs_printable = (str(invalid_chars).removeprefix("{")
+                                 .removesuffix("}"))
+            return (f"Gamemode name should only contain alphanumeric "
+                    f"chars (a-z, A-Z, 0-9), and spaces, underscores, "
+                    f"and hyphens (' ', _, -). Found: {chrs_printable}")
+        return None
+
+    @staticmethod
+    def _escaped_name(name: str) -> str:
+        return name.lower().replace(" ", "-")
 
     async def _reload_inner(self):
         # Recursive walk of dir tree
@@ -164,7 +195,7 @@ class ServerManager(ResourceManager):
                 ephemeral=True
             )
             return
-        if gamemode not in self.gamemodes:
+        if ServerManager._escaped_name(gamemode) not in self.gamemodes:
             title = f"Invalid option `{gamemode}`!"
             desc = ("That gamemode doesn't exist (yet). "
                     "Please try again, or if you think that this is "
@@ -187,13 +218,14 @@ class ServerManager(ResourceManager):
                 ephemeral=True
             )
             return
-        
+        gamemode = ServerManager._escaped_name(gamemode)
+
         interaction: Interaction
         if isinstance(ctx, ApplicationContext):
             interaction = ctx.interaction
         else:
             interaction = ctx
-        
+
         gamemode_config = self.gamemodes[gamemode]
         # Game play...
         game_ctor: type[Game] = gamemode_config.get_value(
@@ -203,7 +235,20 @@ class ServerManager(ResourceManager):
         await game.run(interaction)
 
     async def new_gamemode(self, ctx: ApplicationContext, name: str):
-        if name in self.gamemodes or name in ("?"):
+        error = ServerManager._get_name_error(name)
+        if error is not None:
+            await ctx.send_response(
+                embed=Embed(
+                    title=f"Could not create gamemode named `{name}`",
+                    description=error,
+                    color=Color.from_rgb(255, 0, 0)
+                ),
+                ephemeral=True
+            )
+            return
+        display_name = name
+        name = ServerManager._escaped_name(name)
+        if name in self.gamemodes:
             await ctx.send_response(
                 embed=Embed(
                     title=f"Could not create gamemode named `{name}`",
@@ -218,7 +263,9 @@ class ServerManager(ResourceManager):
             return
         cfg = GamemodeConfig(
             self.path.joinpath(f"./{name}.txt"), self.task_handler)
+        cfg.set_value(GamemodeConfig.DISPLAY_NAME, display_name)
         self.gamemodes[name] = cfg
+        self.sync_discord_commands()
         self.edit_gamemode(ctx, name)
 
     async def edit_gamemode(self, ctx: ApplicationContext | Interaction,
@@ -239,6 +286,7 @@ class ServerManager(ResourceManager):
                 ephemeral=True
             )
             return
+        name = ServerManager._escaped_name(name)
         interaction: Interaction
         if isinstance(ctx, ApplicationContext):
             interaction = ctx.interaction

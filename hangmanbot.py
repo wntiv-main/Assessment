@@ -12,7 +12,7 @@ from resources.serverlistmanager import ServerListManager
 
 class HangmanBot(Bot):
     """Discord bot implementation"""
-    logger = Logger("HangmanBot")
+    logger = Logger()
 
     def __init__(self, config_path: Path):
         intents = Intents.none()
