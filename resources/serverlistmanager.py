@@ -21,7 +21,7 @@ class ServerListManager(ResourceManager):
 
     def __init__(self, bot: 'hangmanbot.HangmanBot',
             file_path_provider:  Callable[[], Path],
-            task_handler: Callable[[Coroutine], None]):
+            task_handler: Callable[[Coroutine | Callable], None]):
         super().__init__(task_handler)
         self._bot = bot
         self._file_path = file_path_provider

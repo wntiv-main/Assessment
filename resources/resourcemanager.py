@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from asyncio import AbstractEventLoop
 from threading import Event
 from enum import IntEnum
 import time
@@ -19,7 +18,7 @@ class ResourceManager(ABC):
         READY = 2
         REMOVED = 3
 
-    def __init__(self, task_handler: Callable[[Coroutine], None]):
+    def __init__(self, task_handler: Callable[[Coroutine | Callable], None]):
         self.task_handler = task_handler
         self._ready_event = Event()
         self.state = ResourceManager.State.UNINITIALIZED

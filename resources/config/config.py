@@ -1,10 +1,12 @@
+"""Class to manage a simple key=value-based config file."""
+
 from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop
 from io import TextIOWrapper
 import os
 from pathlib import Path
 from threading import Event
-from typing import Any, Callable, Coroutine
+from typing import Any, Callable, Coroutine, overload
 
 from logger import Logger
 from parserutil import ParserUtil
@@ -51,16 +53,17 @@ class Config(ResourceManager):
             self.notifiers.append(callback)
 
         def write(self, file: TextIOWrapper):
-            """Write this entry to the supplied file"""
-            # TODO: check for already existing line with this config option
-            # and handle appropriately
+            """Write this entry to the supplied file."""
+            # TODO: check for already existing line with this config
+            # option and handle appropriately
+            # if file.mode
             for line in self.description.split("\n"):
                 file.write(f"# {line}\n")
-            file.write(f"{self.name}={self.validator.stringify(self.value)}"\
+            file.write(f"{self.name}={self.validator.stringify(self.value)}"
                        f"\n\n")
 
         def parse(self, value):
-            """Parse the given value and check for change"""
+            """Parse the given value and check for change."""
             try:
                 parsed_value = self.validator.parse(value)
             except ValueError as e:
@@ -69,9 +72,8 @@ class Config(ResourceManager):
                 parsed_value = self.value
             if parsed_value != self.value:
                 Config.logger.debug(
-                    f"Config value '{self.name}' changed to '{parsed_value}'"\
-                    f" from '{self.value}'"
-                )
+                    f"Config value '{self.name}' changed to "
+                    f"'{parsed_value}' from '{self.value}'")
                 old_value = self.value
                 self.value = parsed_value
                 # Notify listeners
@@ -80,18 +82,18 @@ class Config(ResourceManager):
             return self.value
 
         def reset(self):
+            """Reset the value to it's default."""
             self.value = self.default_value
 
     def __init__(self, config_location: Path,
-                 task_handler: Callable[[Coroutine], None]):
+                 task_handler: Callable[[Coroutine | Callable], None]):
         super().__init__(task_handler)
         self._path = config_location
         # Options
         self._config_cache: dict[str, Config.Entry] = {}
         self._add_config_options()
         self._last_read = None
-        self.logger.debug(f"Loading config from file "\
-                            f"'{self._path}'")
+        self.logger.debug(f"Loading config from file '{self._path}'")
         self.reload()
 
     def name(self) -> str:
@@ -104,7 +106,16 @@ class Config(ResourceManager):
         """
         pass
 
-    def _add_config_option(self, *args):
+    @overload
+    def _add_config_option(self, entry: Entry) -> None: ...
+    @overload
+    def _add_config_option(self,
+                           name: str,
+                           validator: ParserUtil.AbstractParser,
+                           description: str,
+                           default_value) -> None: ...
+
+    def _add_config_option(self, *args) -> None:
         match args:
             case (Config.Entry(),):
                 option = args[0]
@@ -121,7 +132,7 @@ class Config(ResourceManager):
         # Create a default config file if one does not exist
         if not self._path.exists():
             self.logger.info(f"No config file found for {self._path}, "
-                             "creating default")
+                             f"creating default")
             with self._path.open("x") as file:
                 for entry in self._config_cache.values():
                     entry.reset()
@@ -155,14 +166,14 @@ class Config(ResourceManager):
         self._last_read = self._path.stat().st_mtime
 
     def check_file_changes(self) -> Event:
-        """Reload the config file if it has changed since we last read"""
+        """Reload the config file if it changed since we last read."""
         # Check if config file has been updated
         if not self._path.exists() or self._path.stat().st_mtime > self._last_read:
             return self.reload()
         return Config.NULL_EVENT
 
     def get_option(self, key: str, safe=False) -> Entry:
-        """Get an entry in the config file"""
+        """Get an entry in the config file."""
         if not safe:
             self.on_ready().wait()
         event = self.check_file_changes()
@@ -171,10 +182,12 @@ class Config(ResourceManager):
         return self._config_cache[key]
 
     def get_value(self, key: str, safe=False) -> Any:
-        """Get the set value for an option in the config file"""
+        """Get the set value for an option in the config file."""
         return self.get_option(key, safe).value
 
     def set_value(self, key: str, value: Any) -> None:
-        """Change the value for an option in the config file"""
-        self.get_option(key, True).value = value
+        """Change the value for an option in the config file."""
+        option = self.get_option(key, True)
+        option.value = value
+        self.task_handler(lambda: option.write())
         # TODO: SAVE CHANGES TO FILE

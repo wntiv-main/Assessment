@@ -2,7 +2,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Thread
-from typing import Coroutine
+from typing import Callable, Coroutine
 from discord import Bot, Guild, Intents, Message
 
 import resources.config as cfg
@@ -49,11 +49,17 @@ class HangmanBot(Bot):
         asyncio.set_event_loop(self._resources_loop)
         self._resources_loop.run_forever()
 
-    def _run_task_on_resources(self, coro: Coroutine):
-        self._resources_loop.run_in_executor(
-            self._resources_executor,
-            asyncio.run,
-            coro)
+    def _run_task_on_resources(self, coro: Coroutine | Callable):
+        if asyncio.iscoroutine(coro):
+            self._resources_loop.run_in_executor(
+                self._resources_executor,
+                asyncio.run,
+                coro)
+        else:
+            self._resources_loop.run_in_executor(
+                self._resources_executor,
+                coro
+            )
 
     async def on_ready(self):
         """Called when bot is connected to the Discord Gateway and ready"""

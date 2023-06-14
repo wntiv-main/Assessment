@@ -48,7 +48,7 @@ class ServerManager(ResourceManager):
             await self.callback(ctx, select.values[0])
 
     def __init__(self, path: Path, guild_id: int,
-                 task_handler: Callable[[Coroutine], None],
+                 task_handler: Callable[[Coroutine | Callable], None],
                  reload: Callable[[], None]):
         super().__init__(task_handler)
         self.sync_discord_commands = reload

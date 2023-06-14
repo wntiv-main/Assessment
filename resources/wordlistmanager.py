@@ -14,7 +14,7 @@ class WordListManager(ResourceManager):
     logger = Logger()
 
     def __init__(self, file_path_provider: Callable[[], list[str]],
-                 task_handler: Callable[[Coroutine], None]):
+                 task_handler: Callable[[Coroutine | Callable], None]):
         super().__init__(task_handler)
         # Defer word list loading as it could be slow
         self.file_paths = file_path_provider
