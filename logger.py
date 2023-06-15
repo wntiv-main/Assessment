@@ -1,3 +1,5 @@
+"""Utility for cleanly logging organised info and error messages."""
+
 from enum import IntEnum
 import os
 import sys
@@ -7,11 +9,13 @@ from threading import Lock
 # Ensure terminal is correctly set up to handle ANSI escape sequences
 os.system("")
 
+
 class Logger:
-    """
-    Util class for creating organised and clear output logs
-    """
+    """Util class for creating organised and clear output logs."""
+
     class Level(IntEnum):
+        """Enum representing priority level of a log message."""
+
         DEBUG = 0
         INFO = 1
         WARN = 2
@@ -57,10 +61,10 @@ class Logger:
         caller = sys._getframe().f_back.f_back.f_back
         match self.get_level():
             case Logger.Level.DEBUG:
-                path = Path(caller.f_code.co_filename).absolute()\
-                    .relative_to(Path('./').absolute())
-                return f"{caller.f_code.co_name} at ./"\
-                       f"{path}:{caller.f_lineno}"
+                path = Path(caller.f_code.co_filename).absolute()
+                path = path.relative_to(Path('./').absolute())
+                return (f"{caller.f_code.co_name} at ./{path}:"
+                        f"{caller.f_lineno}")
             case _:
                 return f"{caller.f_code.co_name}"
 
@@ -68,8 +72,8 @@ class Logger:
         """Log a message at the given log level."""
         with self.lock:
             if self.get_level() <= level:
-                print(f"{Logger.COLORS[level]}[{self.name}:{level.name} in"
-                      f" {self._traceback()}]", *args, "\033[0m", **kwargs)
+                print(f"{Logger.COLORS[level]}[{self.name}:{level.name} in "
+                      f"{self._traceback()}]", *args, "\033[0m", **kwargs)
 
     def is_debug(self):
         """Return whether logger should display debug messages."""
@@ -96,7 +100,7 @@ class Logger:
         self.log(Logger.Level.WARN, *args, **kwargs)
 
     def is_error(self):
-        """Returns whether logger should display error messages."""
+        """Return whether logger should display error messages."""
         return self.get_level() <= self.Level.ERROR
 
     def error(self, *args, **kwargs):

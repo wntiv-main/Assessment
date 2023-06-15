@@ -1,3 +1,5 @@
+"""Implementation for the actual discord bot."""
+
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -11,10 +13,12 @@ from resources.serverlistmanager import ServerListManager
 
 
 class HangmanBot(Bot):
-    """Discord bot implementation"""
+    """Hangman Discord bot implementation."""
+
     logger = Logger()
 
     def __init__(self, config_path: Path):
+        """Initialise the bot from a path to a config file."""
         intents = Intents.none()
         intents.messages = True
         intents.message_content = True
@@ -22,6 +26,7 @@ class HangmanBot(Bot):
         intents.dm_messages = True
         super().__init__("Hangman game for Discord", intents=intents)
 
+        # Stuff for multithreading for resource loading
         self._resources_loop = asyncio.new_event_loop()
         self._tasks = set()
         self._thread = Thread(
@@ -37,6 +42,9 @@ class HangmanBot(Bot):
             self._run_task_on_resources
         )
 
+        self.config.get_option(cfg.BotConfig.GAMEMODES_DIR).when_changed(
+            lambda *_: self.server_manager.reload())
+
     def run(self) -> None:
         """Run the bot. Blocking call."""
         self._thread.start()
@@ -50,6 +58,8 @@ class HangmanBot(Bot):
         self._resources_loop.run_forever()
 
     def _run_task_on_resources(self, coro: Coroutine | Callable):
+        # Run resource loading task
+        # Using executor to potentially run multiple tasks concurrently
         if asyncio.iscoroutine(coro):
             self._resources_loop.run_in_executor(
                 self._resources_executor,
@@ -62,13 +72,15 @@ class HangmanBot(Bot):
             )
 
     async def on_ready(self):
-        """Called when bot is connected to the Discord Gateway and ready"""
-        self.logger.info(f"Bot is connected to Discord Gateway")
+        """Bot has initialised, load server manager."""
+        self.logger.info("Bot is connected to Discord Gateway")
         self.server_manager.reload()
 
     async def on_guild_join(self, guild: Guild):
+        """Update server manager with new server."""
         self.logger.info(f"Joined guild {guild.id}")
         self.server_manager.new_guild(guild.id)
 
     async def on_message(self, msg: Message):
+        """Update server with message that may affect game."""
         await self.server_manager.update_servers(msg, self)

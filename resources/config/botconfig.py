@@ -1,3 +1,5 @@
+"""Config manager for the Hangamen Discord bot."""
+
 from pathlib import Path
 
 from resources.config.config import Config
@@ -5,7 +7,8 @@ from parserutil import ParserUtil
 
 
 class BotConfig(Config):
-    """Config options for the discord bot"""
+    """Config options for the discord bot."""
+
     GAMEMODES_DIR = "gamemodes_directory"
     DISCORD_TOKEN = "discord_token"
 

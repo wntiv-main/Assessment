@@ -1,26 +1,62 @@
+"""Config manager for a hangman gamemode."""
+
 from enum import IntEnum
 from resources.config.config import Config
 from parserutil import ParserUtil
 import games
+from resources.wordlistmanager import WordListManager
+
+_GUESSERS_MSG = """
+Can all users guess or only the user who started the game?
+
+Valid options:
+private - (default) Only the user who started the game can guess
+public - Any user can guess
+"""
+
+_CLOSE_THREAD_MSG = """
+What should happen to the thread when the game is over?
+Only applies if create_thread is true.
+
+Valid options:
+nothing - Do nothing
+archive - Archive the thread, removing it from the sidebar UI
+lock - (default) Lock the thread, archiving it and preventing further
+       messages from being sent in it.
+delete - Delete the thread. WARNING: This action is irreversible
+"""
 
 
 class GamemodeConfig(Config):
+    """Config manager for a hangman gamemode."""
+
     class Publicity(IntEnum):
+        """Enum representing the level of publicity."""
+
         PRIVATE = 0
         PUBLIC = 1
+
+    class ClosingThreadActions(IntEnum):
+        """Enum of actions to be performed when closing a thread."""
+
+        NOTHING = 0
+        ARCHIVE = 1
+        LOCK = 2
+        DELETE = 3
 
     DISPLAY_NAME = "display_name"
     GAME_TYPE = "gamemode"
     DESCRIPTION = "description"
     NUMBER_LIVES = "number_of_lives"
-    WORD_LIST_PATHS = "word_list_paths"
+    WORD_LIST = "word_list_paths"
     CREATE_THREAD = "create_thread"
+    CLOSE_THREAD_ACTION = "close_thread_action"
     GUESSERS = "guessers"
 
     def _add_config_options(self):
         self._add_config_option(
             GamemodeConfig.DISPLAY_NAME,
-            ParserUtil.EnumParser(games.Gamemode),
+            ParserUtil.STRING_PARSER,
             "Displayed name of this gamemode",
             "Hangman"
         )
@@ -43,11 +79,14 @@ class GamemodeConfig(Config):
             8
         )
         self._add_config_option(
-            GamemodeConfig.WORD_LIST_PATHS,
-            ParserUtil.STRING_LIST_PARSER,
+            GamemodeConfig.WORD_LIST,
+            ParserUtil.WORD_LIST_PARSER,
             "Paths to the word lists the game uses",
-            ["./words.txt", "./words_alpha.txt",
-             "-./profanity-list.txt", "-./word-blacklist.txt"]
+            WordListManager("./words.txt"
+                            "|./words_alpha.txt"
+                            "|-./profanity-list.txt"
+                            "|-./word-blacklist.txt",
+                            self.task_handler)
         )
         self._add_config_option(
             GamemodeConfig.CREATE_THREAD,
@@ -56,8 +95,14 @@ class GamemodeConfig(Config):
             True
         )
         self._add_config_option(
+            GamemodeConfig.CLOSE_THREAD_ACTION,
+            ParserUtil.EnumParser(GamemodeConfig.ClosingThreadActions),
+            _CLOSE_THREAD_MSG,
+            GamemodeConfig.ClosingThreadActions.LOCK
+        )
+        self._add_config_option(
             GamemodeConfig.GUESSERS,
             ParserUtil.EnumParser(GamemodeConfig.Publicity),
-            "Can all users guess or only the user who started the game",
+            _GUESSERS_MSG,
             GamemodeConfig.Publicity.PRIVATE
         )
