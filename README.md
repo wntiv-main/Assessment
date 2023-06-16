@@ -16,4 +16,4 @@ To run bot, just run the `main.py` file:
 ```
 $ py main.py
 ```
-This will start the discord bot. You will need a bot token, so if the program crashes immediately this is probable why. In `config.txt`, replace the `<TOKEN>` after `discord_token=` with your bot's discord token, and run the script again.
+This will start the discord bot. You will need a bot token, so if the program crashes immediately this is probably why. In `config.txt`, replace the `<TOKEN>` after `discord_token=` with your bot's discord token, and run the script again.
