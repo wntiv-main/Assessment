@@ -1,4 +1,4 @@
-"""Config manager for the Hangamen Discord bot."""
+"""Config manager for the Hangmen Discord bot."""
 
 from pathlib import Path
 

@@ -143,7 +143,7 @@ class Config(ResourceManager):
                  task_handler: Callable[[Coroutine | Callable], None]):
         """
         Create a config manager from a file path.
-        
+
         Accepts the Path object pointing to the path, as well as a task
         handler function which should handle any async tasks that need
         to be executed in the future.

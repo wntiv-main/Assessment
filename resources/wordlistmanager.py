@@ -1,3 +1,4 @@
+"""Manager of a word list from a set of files."""
 
 from asyncio import Lock
 from enum import IntEnum
@@ -17,22 +18,26 @@ class WordListManager(ResourceManager):
     file paths, with optional prefixes for modifiers ("-" is blacklist,
     "&" is whitelist).
     """
+
     logger = Logger()
     file_locks: dict[Path, Lock] = {}
 
     class ListType(IntEnum):
+        """Enum of ways this sublist can be treated by the word list."""
+
         APPEND = 0
         BLACKLIST = 1
         WHITELIST = 2
 
     def __init__(self, file_paths: str,
                  task_handler: Callable[[Coroutine | Callable], None]):
+        """Create the word list from the given "|"-seperated paths."""
         super().__init__(task_handler)
         self.file_paths = file_paths.split("|")
         self.words = ()
 
     async def _reload_inner(self):
-        """Parse all files and assemble word list"""
+        """Parse all files and assemble word list."""
         # Setup word list
         # Use HashSet instead of list, as order does not matter and
         # HashSet has much better performance for removing items, as
@@ -59,7 +64,8 @@ class WordListManager(ResourceManager):
             async with WordListManager.file_locks[file_path]:
                 start_time = time.perf_counter()
                 self._parse_file(file_path, list_type)
-            self.logger.debug(f"Loading words from '{file_path}', took "
+            self.logger.debug(
+                f"Loading words from '{file_path}', took "
                 f"{(time.perf_counter() - start_time) * 1000}ms")
         self.words = tuple(self.words)
 
@@ -107,8 +113,10 @@ class WordListManager(ResourceManager):
                                 filter(str.isalpha,
                                     map(str.strip,
                                         frozenset(file.readlines())))))
+        # File not available
         except IOError as e:
             self.logger.error(f"Could not open file {file_path}, due to {e}")
 
     def __str__(self) -> str:
+        """Return string that would create identical word list."""
         return "|".join(self.file_paths)
