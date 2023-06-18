@@ -1,0 +1,40 @@
+# Displayed name of this gamemode
+display_name=Test purposes for video
+
+# Gamemode this game should be
+gamemode=singleplayer
+
+# Description of gamemode (shown in discord UI)
+description=Just hangman
+
+# Number of lives the player has
+number_of_lives=8
+
+# Paths to the word lists the game uses
+word_list_paths=./words.txt|./words_alpha.txt|-./profanity-list.txt|-./word-blacklist.txt
+
+# Whether or not a thread should be created to play the game
+create_thread=True
+
+# 
+# What should happen to the thread when the game is over?
+# Only applies if create_thread is true.
+# 
+# Valid options:
+# nothing - Do nothing
+# archive - Archive the thread, removing it from the sidebar UI
+# lock - (default) Lock the thread, archiving it and preventing further
+#        messages from being sent in it.
+# delete - Delete the thread. WARNING: This action is irreversible
+# 
+close_thread_action=lock
+
+# 
+# Can all users guess or only the user who started the game?
+# 
+# Valid options:
+# private - (default) Only the user who started the game can guess
+# public - Any user can guess
+# 
+guessers=private
+

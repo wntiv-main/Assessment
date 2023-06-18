@@ -38,7 +38,7 @@ class SingleplayerGame(Game):
         self.random.word_list = new_list
 
     async def _update_inner(self, msg: Message, bot: Bot):
-        guess = msg.content.lower()
+        guess = msg.content.lower().strip()
         await self._handle_guess(guess, msg)
         await self.channel.send(escape_markdown(" ".join(self.progress))
                                 + f"\nYou have {self.lives} lives remaining.")

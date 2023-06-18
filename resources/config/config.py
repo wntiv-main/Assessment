@@ -5,10 +5,10 @@ from asyncio import Lock
 from io import TextIOWrapper
 from pathlib import Path
 from threading import Event
-from typing import Any, Callable, Coroutine, overload
+from typing import Any, Callable, Coroutine, Iterable, overload
 
 from logger import Logger
-from parserutil import ParserUtil
+import parserutil
 from resources.resourcemanager import ResourceManager
 
 
@@ -32,7 +32,7 @@ class Config(ResourceManager):
     class Entry:
         """Represents an entry within the config file."""
 
-        def __init__(self, name: str, validator: ParserUtil.AbstractParser,
+        def __init__(self, name: str, validator: parserutil.AbstractParser,
                      description: str, default_value,
                      task_handler: Callable[[Coroutine | Callable], None]):
             """Create an entry within a config file."""
@@ -86,8 +86,9 @@ class Config(ResourceManager):
                                 # preserve whitespace
                                 equals_index = line.find("=")
                                 has_space = line[equals_index + 1] == " "
-                                line = line[:equals_index + has_space]
-                                line += self.value
+                                line = line[:equals_index + has_space + 1]
+                                line += self.validator.stringify(self.value)
+                                line += "\n"
                                 found = True
                             if line.isspace():
                                 trailing_newlines += 1
@@ -101,32 +102,47 @@ class Config(ResourceManager):
                             f"{self.name}="
                             f"{self.validator.stringify(self.value)}"
                             f"\n\n")
-                temp_path.replace(file)
+                while True:
+                    try:
+                        temp_path.replace(file)
+                        break
+                    except IOError:
+                        pass
             else:
                 # Unreachable
                 pass
 
-        def parse(self, value: str) -> Any:
-            """Parse the given value and check for change."""
+        def parse(self, value: str) -> Any | ValueError:
+            """
+            Parse the given value.
+
+            Return the parsed value, or None if there is an error
+            parsing.
+            """
             # Early check for equivilent value
             if value == self.validator.stringify(self.value):
                 return self.value
             try:
-                if isinstance(self.validator, ParserUtil.ComplexParser):
+                if isinstance(self.validator, parserutil.ComplexParser):
                     # Complex parsers need extra information
                     parsed_value = self.validator.parse(value, self)
                 else:
                     parsed_value = self.validator.parse(value)
             except ValueError as e:
-                # Error parsing, log and use old value
+                # Error parsing, log return error
                 Config.logger.error(f"Could not parse {value}:", *e.args)
-                parsed_value = self.value
-            if parsed_value != self.value:
+                return e
+            return parsed_value
+
+        def parse_and_set(self, value: str):
+            """Parse the value and set it, if it has changed."""
+            parsed_value = self.parse(value)
+            if (parsed_value != self.value and
+                    not isinstance(parsed_value, ValueError)):
                 Config.logger.debug(
                     f"Config value '{self.name}' changed to "
                     f"'{parsed_value}' from '{self.value}'")
                 self._set_value(parsed_value)
-            return self.value
 
         def _set_value(self, value):
             old_value = self.value
@@ -160,6 +176,10 @@ class Config(ResourceManager):
     def name(self) -> str:
         """Return the name of this config file."""
         return self._path.stem
+    
+    def entries(self) -> Iterable[Entry]:
+        """Return all entries in this config."""
+        return self._config_cache.values()
 
     @abstractmethod
     def _add_config_options(self):
@@ -176,7 +196,7 @@ class Config(ResourceManager):
     @overload
     def _add_config_option(self,
                            name: str,
-                           validator: ParserUtil.AbstractParser,
+                           validator: parserutil.AbstractParser,
                            description: str,
                            default_value) -> None: ...
 
@@ -184,7 +204,7 @@ class Config(ResourceManager):
         match args:
             case (Config.Entry(),):
                 option = args[0]
-            case (str(), ParserUtil.AbstractParser(), str(), _):
+            case (str(), parserutil.AbstractParser(), str(), _):
                 option = Config.Entry(*args, self.task_handler)
             case _:
                 self.logger.error("Failed to initialize config option"
@@ -225,7 +245,7 @@ class Config(ResourceManager):
                     value = value.removeprefix(" ")
                     if key in self._config_cache:
                         # Detecting changes
-                        self._config_cache[key].parse(value)
+                        self._config_cache[key].parse_and_set(value)
                     else:
                         self.logger.warn(
                             f"Unknown config option '{key}', with "
@@ -271,12 +291,15 @@ class Config(ResourceManager):
         """Change the value for an option in the config file."""
         option = self.get_option(key, True)
         option._set_value(value)
+        self.logger.debug(f"Queuing write changes to {self._path}.{key}")
         # Queue saving changes to file
         self.task_handler(self._set_value_update_file(option))
 
     async def _set_value_update_file(self, option: Entry):
         # Make sure any outside pending changes are accounted for first
         self.check_file_changes().wait()
+        self.logger.info(f"Writing config changes to '{self._path}': "
+                         f"{option.name} changed to '{option.value}'")
         # Lock and make changes
         async with self._lock:
             option.write(self._path)

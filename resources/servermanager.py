@@ -1,22 +1,61 @@
 """Manager for the resources of a single discord server."""
 
 import datetime
+from enum import Enum
 import functools
 from pathlib import Path
 import shutil
 from typing import Callable, Coroutine, Iterable
 
 from discord import (
-    ApplicationContext, Bot, Color, Embed, EmbedField, Interaction, Message,
-    Option, OptionChoice, Permissions, SlashCommand, ApplicationCommandMixin,
-    SlashCommandGroup
+    ApplicationContext, Bot, ButtonStyle, Color, Embed, EmbedField,
+    Interaction, Message, Option, OptionChoice, Permissions, SelectOption,
+    SlashCommand, ApplicationCommandMixin, SlashCommandGroup
 )
-from discord.ui import View, Select, string_select
+from discord.interactions import Interaction
+from discord.ui import View, Select, string_select, Button, Item, Modal
+from discord.ui.input_text import InputText
 
 from games.game import Game
 from resources.config import GamemodeConfig
 from logger import Logger
+from resources.config import Config
 from resources.resourcemanager import ResourceManager
+import parserutil
+
+
+def _all_same_case(value: str):
+    return value == value.lower() or value == value.upper()
+
+
+def _prettify(name: str):
+    words = []
+    if "_" in name:
+        # Snake case handling
+        words = name.split("_")
+    elif _all_same_case(name):
+        # Single word, not camel case
+        return name.title()
+    else:
+        # Camel case parsing
+        for char in name:
+            if char != char.lower() or not words:
+                # Uppercase, or first char in str
+                words.append(char)
+            else:
+                # Lowercase
+                words[-1] += char
+    return " ".join(words).title()
+
+
+def _stringify(value):
+    match value:
+        case type():
+            return value.__name__
+        case Enum():
+            return value.name.lower()
+        case _:
+            return str(value)
 
 
 class ServerManager(ResourceManager):
@@ -57,6 +96,168 @@ class ServerManager(ResourceManager):
             self.disable_all_items()
             self.stop()
             await self.callback(ctx, select.values[0])
+
+    class GamemodeEditorView(View):
+        """A Discord UI View allowing editing of a gamemode config."""
+
+        class TextEditorModal(Modal):
+            """A Discord UI Modal to get a text input for an entry."""
+
+            def __init__(self, parent: 'ServerManager.GamemodeEditorView',
+                         entry: Config.Entry) -> None:
+                """
+                Create a text input modal for the given entry.
+
+                Also requires the parent view that opened the modal.
+                """
+                key = entry.name
+                super().__init__(
+                    title=f"Set value for {_prettify(key)}:")
+                self.parent = parent
+                self.entry = entry
+                self.input = InputText(
+                    label=_prettify(key),
+                    placeholder=_stringify(entry.default_value),
+                    value=(None if entry.value == entry.default_value
+                           else entry.value),
+                    required=False
+                )
+                self.add_item(self.input)
+
+            async def callback(self, interaction: Interaction):
+                """Handle submission of the modal."""
+                value = self.entry.parse(self.input.value)
+                if isinstance(value, ValueError):
+                    await interaction.response.send_message(
+                        embed=Embed(
+                            title=f"Invalid value for "
+                                  f"{_prettify(self.entry.name)}",
+                            description=f"{'. '.join(value.args)}",
+                            color=Color.from_rgb(255, 0, 0)),
+                        ephemeral=True,
+                        delete_after=60)
+                else:
+                    await self.parent._callback(self.entry.name, value,
+                                                interaction)
+                self.stop()
+
+        def __init__(self, config: GamemodeConfig, respond_to: Interaction):
+            """Initialize the view and send the response to the user."""
+            super().__init__(timeout=3600)
+            self._config = config
+            self._interaction = respond_to
+            # Add view items based on config entries
+            for entry in config.entries():
+                item: Item
+                match entry.validator:
+                    case parserutil.BOOL_PARSER:
+                        # Create toggle button
+                        item = Button(
+                            custom_id=entry.name,
+                            label=_prettify(entry.name),
+                            style=(ButtonStyle.green if entry.value
+                                   else ButtonStyle.red),
+                            emoji=("✅" if entry.value else "❎"))
+                        item.callback = functools.partial(
+                            self._bool_callback, entry.name)
+                        entry.when_changed(functools.partial(
+                            self._toggle_bool_button, item))
+                    case parserutil.EnumParser():
+                        # Create select box for the available options
+                        enum = entry.validator.enum
+                        # Put spaces between words and make non-plural
+                        enum_name = _prettify(enum.__name__).removesuffix("s")
+                        # English moment
+                        grammer = "n" if enum_name[0] in "aeiou" else ""
+                        item = Select(
+                            custom_id=entry.name,
+                            placeholder=f"Select a{grammer} {enum_name}...",
+                            min_values=1,
+                            max_values=1,
+                            options=[
+                                SelectOption(
+                                    label=_prettify(name),
+                                    value=name,
+                                    description=_stringify(value.value),
+                                    # Selected if this value is the
+                                    # currently selected value
+                                    default=(value == entry.value))
+                                for name, value in enum.__members__.items()])
+                        item.callback = functools.partial(
+                            self._enum_callback, entry.name)
+                    case _:
+                        # Anything without a specific parser yet
+                        # Create button to open text modal
+                        item = Button(
+                            custom_id=entry.name,
+                            label=_prettify(entry.name),
+                            style=ButtonStyle.gray,
+                            emoji="📝")
+                        item.callback = functools.partial(
+                            self._text_callback, entry.name)
+                self.add_item(item)
+
+        async def send(self):
+            """Send message containing the config view to the user."""
+            disply_name = self._config.get_value(GamemodeConfig.DISPLAY_NAME)
+            # Send view to user
+            self._msg = await self._interaction.response.send_message(
+                embed=Embed(
+                    color=Color.from_rgb(0, 200, 200),
+                    title=f"Editing config for {disply_name} "
+                          f"({self._config.name()}):",
+                    fields=[
+                        EmbedField(
+                            _prettify(entry.name), entry.description)
+                        for entry in self._config.entries()]
+                ),
+                view=self,
+                ephemeral=True)
+
+        def _toggle_bool_button(self, button: Button, old_value: bool,
+                                new_value: bool):
+            button.style = (ButtonStyle.green if new_value
+                            else ButtonStyle.red)
+            button.emoji = ("✅" if new_value else "❎")
+            self._config.task_handler(self._update())
+
+        async def _bool_callback(self, key: str, interaction: Interaction):
+            await self._callback(key, not self._config.get_value(key), interaction)
+
+        async def _enum_callback(self, key: str, interaction: Interaction):
+            select: Select = self.get_item(key)
+            value = self._config.get_option(key).parse(select.values[0])
+            if isinstance(value, ValueError):
+                # Error parsing enum, should be impossible
+                await interaction.response.send_message(
+                    embed=Embed(
+                        title=f"Invalid value for {_prettify(key)}",
+                        description=f"{'. '.join(value.args)}",
+                        color=Color.from_rgb(255, 0, 0)),
+                    ephemeral=True,
+                    delete_after=60)
+                return
+            await self._callback(key, value, interaction)
+
+        async def _text_callback(self, key: str, interaction: Interaction):
+            await interaction.response.send_modal(self.TextEditorModal(
+                self, self._config.get_option(key)))
+
+        async def _callback(self, key: str, value, interaction: Interaction):
+            self._config.set_value(key, value)
+            await interaction.response.send_message(
+                embed=Embed(
+                    title=f"Set value for {_prettify(key)}",
+                    description=f"Successfully set value to "
+                                f"{_stringify(value)}",
+                    color=Color.from_rgb(0, 255, 0)),
+                ephemeral=True,
+                delete_after=60)
+
+        async def _update(self):
+            # Send changes in view to user
+            self._interaction.client.loop.create_task(
+                self._interaction.edit_original_response(view=self))
 
     def __init__(self, path: Path, guild_id: int,
                  task_handler: Callable[[Coroutine | Callable], None],
@@ -288,15 +489,14 @@ class ServerManager(ResourceManager):
                                  "internal usage."),
                     color=Color.from_rgb(255, 0, 0)
                 ),
-                ephemeral=True
-            )
+                ephemeral=True)
             return
         cfg = GamemodeConfig(
             self.path.joinpath(f"./{name}.txt"), self.task_handler)
         cfg.set_value(GamemodeConfig.DISPLAY_NAME, display_name)
         self.gamemodes[name] = cfg
         self.sync_discord_commands()
-        self.edit_gamemode(ctx, name)
+        await self.edit_gamemode(ctx, name)
 
     async def edit_gamemode(self, ctx: ApplicationContext | Interaction,
                             name: str | None):
@@ -323,10 +523,9 @@ class ServerManager(ResourceManager):
             interaction = ctx.interaction
         else:
             interaction = ctx
-        await interaction.response.send_message(
-            content=f"Editing config for {name}",
-            ephemeral=True)
-        # TODO: ACTUALLY EDIT THE CONFIG
+        view = ServerManager.GamemodeEditorView(
+            self.gamemodes[name], interaction)
+        await view.send()
 
     async def update(self, msg: Message, bot: Bot):
         """Update any running games when a message is sent."""

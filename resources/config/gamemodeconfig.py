@@ -1,8 +1,8 @@
 """Config manager for a hangman gamemode."""
 
-from enum import IntEnum
+from enum import Enum, IntEnum
 from resources.config.config import Config
-from parserutil import ParserUtil
+import parserutil
 import games
 from resources.wordlistmanager import WordListManager
 
@@ -30,19 +30,19 @@ delete - Delete the thread. WARNING: This action is irreversible
 class GamemodeConfig(Config):
     """Config manager for a hangman gamemode."""
 
-    class Publicity(IntEnum):
+    class GuessPublicity(Enum):
         """Enum representing the level of publicity."""
 
-        PRIVATE = 0
-        PUBLIC = 1
+        PRIVATE = "Only the player who started the game"
+        PUBLIC = "Anyone"
 
-    class ClosingThreadActions(IntEnum):
+    class ClosingThreadActions(Enum):
         """Enum of actions to be performed when closing a thread."""
 
-        NOTHING = 0
-        ARCHIVE = 1
-        LOCK = 2
-        DELETE = 3
+        NOTHING = "Don't do anything"
+        ARCHIVE = "Archive the thread"
+        LOCK = "Stop users from sending messages in the thread"
+        DELETE = "Remove the thread"
 
     DISPLAY_NAME = "display_name"
     GAME_TYPE = "gamemode"
@@ -56,31 +56,31 @@ class GamemodeConfig(Config):
     def _add_config_options(self):
         self._add_config_option(
             GamemodeConfig.DISPLAY_NAME,
-            ParserUtil.STRING_PARSER,
+            parserutil.STRING_PARSER,
             "Displayed name of this gamemode",
             "Hangman"
         )
         self._add_config_option(
             GamemodeConfig.GAME_TYPE,
-            ParserUtil.EnumParser(games.Gamemode),
+            parserutil.EnumParser(games.Gamemode),
             "Gamemode this game should be",
             games.Gamemode.SINGLEPLAYER
         )
         self._add_config_option(
             GamemodeConfig.DESCRIPTION,
-            ParserUtil.STRING_PARSER,
+            parserutil.STRING_PARSER,
             "Description of gamemode (shown in discord UI)",
             "Just hangman"
         )
         self._add_config_option(
             GamemodeConfig.NUMBER_LIVES,
-            ParserUtil.INT_PARSER,
+            parserutil.INT_PARSER,
             "Number of lives the player has",
             8
         )
         self._add_config_option(
             GamemodeConfig.WORD_LIST,
-            ParserUtil.WORD_LIST_PARSER,
+            parserutil.WORD_LIST_PARSER,
             "Paths to the word lists the game uses",
             WordListManager("./words.txt"
                             "|./words_alpha.txt"
@@ -90,19 +90,19 @@ class GamemodeConfig(Config):
         )
         self._add_config_option(
             GamemodeConfig.CREATE_THREAD,
-            ParserUtil.BOOL_PARSER,
+            parserutil.BOOL_PARSER,
             "Whether or not a thread should be created to play the game",
             True
         )
         self._add_config_option(
             GamemodeConfig.CLOSE_THREAD_ACTION,
-            ParserUtil.EnumParser(GamemodeConfig.ClosingThreadActions),
+            parserutil.EnumParser(GamemodeConfig.ClosingThreadActions),
             _CLOSE_THREAD_MSG,
             GamemodeConfig.ClosingThreadActions.LOCK
         )
         self._add_config_option(
             GamemodeConfig.GUESSERS,
-            ParserUtil.EnumParser(GamemodeConfig.Publicity),
+            parserutil.EnumParser(GamemodeConfig.GuessPublicity),
             _GUESSERS_MSG,
-            GamemodeConfig.Publicity.PRIVATE
+            GamemodeConfig.GuessPublicity.PRIVATE
         )

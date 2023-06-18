@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from resources.config.config import Config
-from parserutil import ParserUtil
+import parserutil
 
 
 class BotConfig(Config):
@@ -15,13 +15,13 @@ class BotConfig(Config):
     def _add_config_options(self):
         self._add_config_option(
             BotConfig.GAMEMODES_DIR,
-            ParserUtil.PATH_PARSER,
+            parserutil.PATH_PARSER,
             "Directory to load gamemode configs from",
             Path("./config/")
         )
         self._add_config_option(
             BotConfig.DISCORD_TOKEN,
-            ParserUtil.STRING_PARSER,
+            parserutil.STRING_PARSER,
             "Token for the discord bot",
             "<TOKEN>"
         )

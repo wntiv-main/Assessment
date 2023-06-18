@@ -40,8 +40,9 @@ class Game(ABC):
         self.user = ctx.user
         await ctx.response.send_message(f"Starting game of {display_name} "
                                         f"hangman")
-        if self.config.get_value(cfg.GamemodeConfig.CREATE_THREAD):
-            # Create thread
+        if (self.config.get_value(cfg.GamemodeConfig.CREATE_THREAD)
+                and not isinstance(ctx.channel, Thread)):
+            # Create thread unless command was used inside thread
             response = await ctx.original_response()
             self.channel = await response.create_thread(
                 name=f"Hangman ({display_name} mode)")
@@ -59,7 +60,7 @@ class Game(ABC):
             return
         # Game only accepts guesses from the user who started the game
         if (self.config.get_value(cfg.GamemodeConfig.GUESSERS)
-                != cfg.GamemodeConfig.Publicity.PUBLIC
+                != cfg.GamemodeConfig.GuessPublicity.PUBLIC
                 and msg.author.id != self.user.id):
             return
         await self._update_inner(msg, bot)

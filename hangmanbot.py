@@ -5,7 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Thread
 from typing import Callable, Coroutine
-from discord import Bot, Guild, Intents, Message
+from aiohttp import ClientConnectorError
+from discord import Bot, Guild, Intents, LoginFailure, Message
 
 import resources.config as cfg
 from logger import Logger
@@ -48,10 +49,22 @@ class HangmanBot(Bot):
     def run(self) -> None:
         """Run the bot. Blocking call."""
         self._thread.start()
-        super().run(
-            self.config.get_value(cfg.BotConfig.DISCORD_TOKEN),
-            reconnect=True
-        )
+        token = self.config.get_value(cfg.BotConfig.DISCORD_TOKEN)
+        try:
+            super().run(
+                token,
+                reconnect=True
+            )
+        except ClientConnectorError as e:
+            self.logger.error("Failed to connect to Discord Gateway. "
+                              "Do you have internet, or is Discord "
+                              "down?",
+                              e.strerror)
+        except LoginFailure:
+            self.logger.error(f"Failed to authenticate with Discord "
+                              f"using '{token}' as token. Make sure "
+                              f"you are using the correct token (you "
+                              f"can change this in config.txt)")
 
     def _resources_thread(self):
         asyncio.set_event_loop(self._resources_loop)
